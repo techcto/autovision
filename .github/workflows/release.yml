@@ -8,6 +8,7 @@ on:
 permissions: {contents: read, id-token: write}
 env:
   AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+  MP_AWS_ECR: ${{ vars.MP_AWS_ECR }}
   REPOSITORY_PREFIX: ${{ vars.REPOSITORY_PREFIX || 'solodev/autovision' }}
   ASSETS_BUCKET: ${{ vars.ASSETS_BUCKET || 'autovision-api' }}
 jobs:
@@ -22,25 +23,19 @@ jobs:
         with: {python-version: '3.13'}
       - run: pip install cfn-lint && cfn-lint devops/cloudformation/*.yaml
       - uses: aws-actions/configure-aws-credentials@v4
-        if: ${{ vars.AWS_ROLE_ARN != '' }}
-        with:
-          aws-region: ${{ env.AWS_REGION }}
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-      - uses: aws-actions/configure-aws-credentials@v4
-        if: ${{ vars.AWS_ROLE_ARN == '' }}
         with:
           aws-region: ${{ env.AWS_REGION }}
           aws-access-key-id: ${{ vars.MP_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.MP_AWS_SECRET_ACCESS_KEY }}
-      - id: login
-        uses: aws-actions/amazon-ecr-login@v2
-        with:
-          registries: ${{ vars.MP_AWS_ACCOUNT_ID || '' }}
+      - name: Log in to publishing registry
+        run: |
+          test -n "$MP_AWS_ECR"
+          aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$MP_AWS_ECR"
       - uses: docker/setup-buildx-action@v3
       - name: Build and publish service images
         env:
           INPUT_VERSION: ${{ github.event.inputs.release_version }}
-          REGISTRY: ${{ vars.MP_AWS_ECR || steps.login.outputs.registry }}
+          REGISTRY: ${{ vars.MP_AWS_ECR }}
         run: |
           version="$INPUT_VERSION"
           if [ -z "$version" ]; then version="${GITHUB_REF_NAME#v}"; fi
