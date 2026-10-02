@@ -1,0 +1,18 @@
+name: Publish AutoVision template access policy
+on:
+  workflow_dispatch:
+permissions: {contents: read, id-token: write}
+jobs:
+  policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+      - run: bash devops/public-assets.sh
+        env:
+          ASSETS_BUCKET: ${{ vars.ASSETS_BUCKET || 'autovision-api' }}
+
+

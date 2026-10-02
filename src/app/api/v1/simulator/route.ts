@@ -1,0 +1,2 @@
+import{NextRequest,NextResponse}from'next/server';import{operator}from'@/lib/operator';import{validSignal,ingest}from'@/lib/signals';export async function POST(req:NextRequest){const s=await operator(req);if(!s||s.role==='viewer')return NextResponse.json({error:'forbidden'},{status:403});let v;try{v=await req.json()}catch{return NextResponse.json({error:'invalid JSON'},{status:400})}if(!validSignal(v))return NextResponse.json({error:'invalid signal'},{status:400});return NextResponse.json(await ingest(s.orgId,'simulator',{...v,simulated:true}),{status:202})}
+

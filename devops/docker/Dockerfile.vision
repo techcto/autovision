@@ -1,0 +1,10 @@
+FROM python:3.13-slim
+WORKDIR /app
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 OPENCV_IO_MAX_IMAGE_PIXELS=16777216
+COPY src/vision/requirements.txt ./requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt && useradd --uid 10001 --create-home app
+COPY src/vision ./src/vision
+USER app
+EXPOSE 8000
+CMD ["python", "src/vision/server.py"]
+

@@ -1,0 +1,1218 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "AutoVision attached to an existing ECS cluster and ALB listener",
+  "Parameters": {
+    "VpcId": {
+      "Type": "AWS::EC2::VPC::Id"
+    },
+    "PrivateSubnets": {
+      "Type": "List<AWS::EC2::Subnet::Id>"
+    },
+    "ImageBase": {
+      "Type": "String",
+      "Description": "ECR registry/repository prefix without service suffix"
+    },
+    "ReleaseVersion": {
+      "Type": "String",
+      "AllowedPattern": "[0-9A-Za-z.-]+",
+      "Description": "Immutable published image tag"
+    },
+    "RootUsername": {
+      "Type": "String",
+      "Default": "root",
+      "MinLength": 3
+    },
+    "RootPassword": {
+      "Type": "String",
+      "NoEcho": true,
+      "MinLength": 12
+    },
+    "SessionSecret": {
+      "Type": "String",
+      "NoEcho": true,
+      "MinLength": 32
+    },
+    "DeploymentMode": {
+      "Type": "String",
+      "Default": "on-premise",
+      "AllowedValues": [
+        "on-premise",
+        "saas"
+      ]
+    },
+    "DesiredCount": {
+      "Type": "Number",
+      "Default": 1,
+      "MinValue": 1
+    },
+    "StripeSecretKey": {
+      "Type": "String",
+      "NoEcho": true,
+      "Default": ""
+    },
+    "StripeWebhookSecret": {
+      "Type": "String",
+      "NoEcho": true,
+      "Default": ""
+    },
+    "StripeStarterPriceId": {
+      "Type": "String",
+      "Default": ""
+    },
+    "StripeScalePriceId": {
+      "Type": "String",
+      "Default": ""
+    },
+    "SesFrom": {
+      "Type": "String",
+      "Default": ""
+    },
+    "WhatsappOriginationId": {
+      "Type": "String",
+      "Default": ""
+    },
+    "NotificationRecipients": {
+      "Type": "String",
+      "Default": ""
+    },
+    "Cluster": {
+      "Type": "String"
+    },
+    "LoadBalancerSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup::Id"
+    },
+    "ListenerArn": {
+      "Type": "String"
+    },
+    "HostHeader": {
+      "Type": "String",
+      "Default": "autovision.dev"
+    },
+    "WebListenerPriority": {
+      "Type": "Number",
+      "Default": 101,
+      "MinValue": 1,
+      "MaxValue": 49999
+    },
+    "ApiListenerPriority": {
+      "Type": "Number",
+      "Default": 100,
+      "MinValue": 1,
+      "MaxValue": 49999
+    },
+    "BedrockModelId": {
+      "Type": "String",
+      "Default": "",
+      "Description": "Optional Bedrock model/inference-profile ID for enrichment"
+    },
+    "BedrockModelArn": {
+      "Type": "String",
+      "Default": "",
+      "Description": "ARN authorized for bedrock:InvokeModel; include inference profiles as required"
+    }
+  },
+  "Resources": {
+    "ServiceSG": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "AutoVision application tasks",
+        "VpcId": {
+          "Ref": "VpcId"
+        },
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 3000,
+            "ToPort": 3001,
+            "SourceSecurityGroupId": {
+              "Ref": "LoadBalancerSecurityGroup"
+            }
+          }
+        ]
+      }
+    },
+    "WebTarget": {
+      "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VpcId"
+        },
+        "Port": 3000,
+        "Protocol": "HTTP",
+        "TargetType": "ip",
+        "HealthCheckPath": "/api/health"
+      }
+    },
+    "ApiTarget": {
+      "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VpcId"
+        },
+        "Port": 3001,
+        "Protocol": "HTTP",
+        "TargetType": "ip",
+        "HealthCheckPath": "/api/health"
+      }
+    },
+    "Queue": {
+      "Type": "AWS::SQS::Queue",
+      "Properties": {
+        "VisibilityTimeout": 120,
+        "MessageRetentionPeriod": 345600,
+        "RedrivePolicy": {
+          "deadLetterTargetArn": {
+            "Fn::GetAtt": [
+              "DeadLetterQueue",
+              "Arn"
+            ]
+          },
+          "maxReceiveCount": 5
+        }
+      }
+    },
+    "DeadLetterQueue": {
+      "Type": "AWS::SQS::Queue",
+      "Properties": {
+        "MessageRetentionPeriod": 1209600
+      }
+    },
+    "AppTable": {
+      "Type": "AWS::DynamoDB::Table",
+      "Properties": {
+        "BillingMode": "PAY_PER_REQUEST",
+        "AttributeDefinitions": [
+          {
+            "AttributeName": "pk",
+            "AttributeType": "S"
+          },
+          {
+            "AttributeName": "sk",
+            "AttributeType": "S"
+          },
+          {
+            "AttributeName": "gsi1pk",
+            "AttributeType": "S"
+          },
+          {
+            "AttributeName": "gsi1sk",
+            "AttributeType": "S"
+          }
+        ],
+        "KeySchema": [
+          {
+            "AttributeName": "pk",
+            "KeyType": "HASH"
+          },
+          {
+            "AttributeName": "sk",
+            "KeyType": "RANGE"
+          }
+        ],
+        "GlobalSecondaryIndexes": [
+          {
+            "IndexName": "GSI1",
+            "KeySchema": [
+              {
+                "AttributeName": "gsi1pk",
+                "KeyType": "HASH"
+              },
+              {
+                "AttributeName": "gsi1sk",
+                "KeyType": "RANGE"
+              }
+            ],
+            "Projection": {
+              "ProjectionType": "ALL"
+            }
+          }
+        ],
+        "TimeToLiveSpecification": {
+          "AttributeName": "ttl",
+          "Enabled": true
+        },
+        "PointInTimeRecoverySpecification": {
+          "PointInTimeRecoveryEnabled": true
+        },
+        "SSESpecification": {
+          "SSEEnabled": true
+        }
+      }
+    },
+    "EvidenceBucket": {
+      "Type": "AWS::S3::Bucket",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "BucketEncryption": {
+          "ServerSideEncryptionConfiguration": [
+            {
+              "ServerSideEncryptionByDefault": {
+                "SSEAlgorithm": "AES256"
+              }
+            }
+          ]
+        },
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true,
+          "BlockPublicPolicy": true,
+          "IgnorePublicAcls": true,
+          "RestrictPublicBuckets": true
+        }
+      }
+    },
+    "EventBus": {
+      "Type": "AWS::Events::EventBus",
+      "Properties": {
+        "Name": {
+          "Fn::Sub": "${AWS::StackName}-events"
+        }
+      }
+    },
+    "LogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "RetentionInDays": 30
+      }
+    },
+    "ExecutionRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "ecs-tasks.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+          {
+            "Fn::Sub": "arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+          }
+        ]
+      }
+    },
+    "TaskRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "ecs-tasks.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": "autovision-data",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "dynamodb:GetItem",
+                    "dynamodb:PutItem",
+                    "dynamodb:DeleteItem",
+                    "dynamodb:Query",
+                    "dynamodb:UpdateItem"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::GetAtt": [
+                        "AppTable",
+                        "Arn"
+                      ]
+                    },
+                    {
+                      "Fn::Sub": "${AppTable.Arn}/index/*"
+                    }
+                  ]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "sqs:SendMessage",
+                    "sqs:ReceiveMessage",
+                    "sqs:DeleteMessage",
+                    "sqs:GetQueueAttributes"
+                  ],
+                  "Resource": {
+                    "Fn::GetAtt": [
+                      "Queue",
+                      "Arn"
+                    ]
+                  }
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:GetObject",
+                    "s3:PutObject"
+                  ],
+                  "Resource": {
+                    "Fn::Sub": "${EvidenceBucket.Arn}/*"
+                  }
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": "events:PutEvents",
+                  "Resource": {
+                    "Fn::GetAtt": [
+                      "EventBus",
+                      "Arn"
+                    ]
+                  }
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "ses:SendEmail",
+                    "social-messaging:SendWhatsAppMessage"
+                  ],
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "WebTask": {
+      "Type": "AWS::ECS::TaskDefinition",
+      "Properties": {
+        "RequiresCompatibilities": [
+          "FARGATE"
+        ],
+        "NetworkMode": "awsvpc",
+        "Cpu": "256",
+        "Memory": "512",
+        "ExecutionRoleArn": {
+          "Fn::GetAtt": [
+            "ExecutionRole",
+            "Arn"
+          ]
+        },
+        "TaskRoleArn": {
+          "Fn::GetAtt": [
+            "TaskRole",
+            "Arn"
+          ]
+        },
+        "ContainerDefinitions": [
+          {
+            "Name": "web",
+            "Image": {
+              "Fn::Sub": "${ImageBase}-web:${ReleaseVersion}"
+            },
+            "Essential": true,
+            "PortMappings": [
+              {
+                "ContainerPort": 3000
+              }
+            ],
+            "Environment": [
+              {
+                "Name": "NODE_ENV",
+                "Value": "production"
+              },
+              {
+                "Name": "AUTOVISION_TABLE",
+                "Value": {
+                  "Ref": "AppTable"
+                }
+              },
+              {
+                "Name": "AUTOVISION_DEPLOYMENT_MODE",
+                "Value": {
+                  "Ref": "DeploymentMode"
+                }
+              },
+              {
+                "Name": "AUTOVISION_ROOT_USER",
+                "Value": {
+                  "Ref": "RootUsername"
+                }
+              },
+              {
+                "Name": "AUTOVISION_ROOT_PASSWORD",
+                "Value": {
+                  "Ref": "RootPassword"
+                }
+              },
+              {
+                "Name": "AUTOVISION_SESSION_SECRET",
+                "Value": {
+                  "Ref": "SessionSecret"
+                }
+              },
+              {
+                "Name": "AUTOVISION_QUEUE_URL",
+                "Value": {
+                  "Ref": "Queue"
+                }
+              },
+              {
+                "Name": "AUTOVISION_EVIDENCE_BUCKET",
+                "Value": {
+                  "Ref": "EvidenceBucket"
+                }
+              },
+              {
+                "Name": "AUTOVISION_EVENT_BUS",
+                "Value": {
+                  "Ref": "EventBus"
+                }
+              },
+              {
+                "Name": "STRIPE_SECRET_KEY",
+                "Value": {
+                  "Ref": "StripeSecretKey"
+                }
+              },
+              {
+                "Name": "STRIPE_WEBHOOK_SECRET",
+                "Value": {
+                  "Ref": "StripeWebhookSecret"
+                }
+              },
+              {
+                "Name": "STRIPE_STARTER_PRICE_ID",
+                "Value": {
+                  "Ref": "StripeStarterPriceId"
+                }
+              },
+              {
+                "Name": "STRIPE_SCALE_PRICE_ID",
+                "Value": {
+                  "Ref": "StripeScalePriceId"
+                }
+              },
+              {
+                "Name": "AUTOVISION_SES_FROM",
+                "Value": {
+                  "Ref": "SesFrom"
+                }
+              },
+              {
+                "Name": "AUTOVISION_WHATSAPP_ORIGINATION_ID",
+                "Value": {
+                  "Ref": "WhatsappOriginationId"
+                }
+              },
+              {
+                "Name": "AUTOVISION_NOTIFICATION_RECIPIENTS",
+                "Value": {
+                  "Ref": "NotificationRecipients"
+                }
+              },
+              {
+                "Name": "PORT",
+                "Value": "3000"
+              },
+              {
+                "Name": "BEDROCK_MODEL_ID",
+                "Value": {
+                  "Ref": "BedrockModelId"
+                }
+              },
+              {
+                "Name": "AUTOVISION_NOTIFICATION_MODE",
+                "Value": "aws"
+              }
+            ],
+            "LogConfiguration": {
+              "LogDriver": "awslogs",
+              "Options": {
+                "awslogs-group": {
+                  "Ref": "LogGroup"
+                },
+                "awslogs-region": {
+                  "Ref": "AWS::Region"
+                },
+                "awslogs-stream-prefix": "web"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "WebService": {
+      "Type": "AWS::ECS::Service",
+      "DependsOn": "WebListenerRule",
+      "Properties": {
+        "Cluster": {
+          "Ref": "Cluster"
+        },
+        "LaunchType": "FARGATE",
+        "DesiredCount": {
+          "Ref": "DesiredCount"
+        },
+        "TaskDefinition": {
+          "Ref": "WebTask"
+        },
+        "NetworkConfiguration": {
+          "AwsvpcConfiguration": {
+            "AssignPublicIp": "DISABLED",
+            "Subnets": {
+              "Ref": "PrivateSubnets"
+            },
+            "SecurityGroups": [
+              {
+                "Ref": "ServiceSG"
+              }
+            ]
+          }
+        },
+        "HealthCheckGracePeriodSeconds": 60,
+        "LoadBalancers": [
+          {
+            "ContainerName": "web",
+            "ContainerPort": 3000,
+            "TargetGroupArn": {
+              "Ref": "WebTarget"
+            }
+          }
+        ]
+      }
+    },
+    "ApiTask": {
+      "Type": "AWS::ECS::TaskDefinition",
+      "Properties": {
+        "RequiresCompatibilities": [
+          "FARGATE"
+        ],
+        "NetworkMode": "awsvpc",
+        "Cpu": "1024",
+        "Memory": "2048",
+        "ExecutionRoleArn": {
+          "Fn::GetAtt": [
+            "ExecutionRole",
+            "Arn"
+          ]
+        },
+        "TaskRoleArn": {
+          "Fn::GetAtt": [
+            "TaskRole",
+            "Arn"
+          ]
+        },
+        "ContainerDefinitions": [
+          {
+            "Name": "api",
+            "Image": {
+              "Fn::Sub": "${ImageBase}-api:${ReleaseVersion}"
+            },
+            "Essential": true,
+            "PortMappings": [
+              {
+                "ContainerPort": 3001
+              }
+            ],
+            "Environment": [
+              {
+                "Name": "NODE_ENV",
+                "Value": "production"
+              },
+              {
+                "Name": "AUTOVISION_TABLE",
+                "Value": {
+                  "Ref": "AppTable"
+                }
+              },
+              {
+                "Name": "AUTOVISION_DEPLOYMENT_MODE",
+                "Value": {
+                  "Ref": "DeploymentMode"
+                }
+              },
+              {
+                "Name": "AUTOVISION_ROOT_USER",
+                "Value": {
+                  "Ref": "RootUsername"
+                }
+              },
+              {
+                "Name": "AUTOVISION_ROOT_PASSWORD",
+                "Value": {
+                  "Ref": "RootPassword"
+                }
+              },
+              {
+                "Name": "AUTOVISION_SESSION_SECRET",
+                "Value": {
+                  "Ref": "SessionSecret"
+                }
+              },
+              {
+                "Name": "AUTOVISION_QUEUE_URL",
+                "Value": {
+                  "Ref": "Queue"
+                }
+              },
+              {
+                "Name": "AUTOVISION_EVIDENCE_BUCKET",
+                "Value": {
+                  "Ref": "EvidenceBucket"
+                }
+              },
+              {
+                "Name": "AUTOVISION_EVENT_BUS",
+                "Value": {
+                  "Ref": "EventBus"
+                }
+              },
+              {
+                "Name": "STRIPE_SECRET_KEY",
+                "Value": {
+                  "Ref": "StripeSecretKey"
+                }
+              },
+              {
+                "Name": "STRIPE_WEBHOOK_SECRET",
+                "Value": {
+                  "Ref": "StripeWebhookSecret"
+                }
+              },
+              {
+                "Name": "STRIPE_STARTER_PRICE_ID",
+                "Value": {
+                  "Ref": "StripeStarterPriceId"
+                }
+              },
+              {
+                "Name": "STRIPE_SCALE_PRICE_ID",
+                "Value": {
+                  "Ref": "StripeScalePriceId"
+                }
+              },
+              {
+                "Name": "AUTOVISION_SES_FROM",
+                "Value": {
+                  "Ref": "SesFrom"
+                }
+              },
+              {
+                "Name": "AUTOVISION_WHATSAPP_ORIGINATION_ID",
+                "Value": {
+                  "Ref": "WhatsappOriginationId"
+                }
+              },
+              {
+                "Name": "AUTOVISION_NOTIFICATION_RECIPIENTS",
+                "Value": {
+                  "Ref": "NotificationRecipients"
+                }
+              },
+              {
+                "Name": "PORT",
+                "Value": "3001"
+              },
+              {
+                "Name": "AUTOVISION_VISION_URL",
+                "Value": "http://localhost:8000"
+              },
+              {
+                "Name": "BEDROCK_MODEL_ID",
+                "Value": {
+                  "Ref": "BedrockModelId"
+                }
+              },
+              {
+                "Name": "AUTOVISION_NOTIFICATION_MODE",
+                "Value": "aws"
+              }
+            ],
+            "LogConfiguration": {
+              "LogDriver": "awslogs",
+              "Options": {
+                "awslogs-group": {
+                  "Ref": "LogGroup"
+                },
+                "awslogs-region": {
+                  "Ref": "AWS::Region"
+                },
+                "awslogs-stream-prefix": "api"
+              }
+            }
+          },
+          {
+            "Name": "vision",
+            "Image": {
+              "Fn::Sub": "${ImageBase}-vision:${ReleaseVersion}"
+            },
+            "Essential": true,
+            "PortMappings": [
+              {
+                "ContainerPort": 8000
+              }
+            ],
+            "LogConfiguration": {
+              "LogDriver": "awslogs",
+              "Options": {
+                "awslogs-group": {
+                  "Ref": "LogGroup"
+                },
+                "awslogs-region": {
+                  "Ref": "AWS::Region"
+                },
+                "awslogs-stream-prefix": "vision"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "ApiService": {
+      "Type": "AWS::ECS::Service",
+      "DependsOn": "ApiListenerRule",
+      "Properties": {
+        "Cluster": {
+          "Ref": "Cluster"
+        },
+        "LaunchType": "FARGATE",
+        "DesiredCount": {
+          "Ref": "DesiredCount"
+        },
+        "TaskDefinition": {
+          "Ref": "ApiTask"
+        },
+        "NetworkConfiguration": {
+          "AwsvpcConfiguration": {
+            "AssignPublicIp": "DISABLED",
+            "Subnets": {
+              "Ref": "PrivateSubnets"
+            },
+            "SecurityGroups": [
+              {
+                "Ref": "ServiceSG"
+              }
+            ]
+          }
+        },
+        "HealthCheckGracePeriodSeconds": 60,
+        "LoadBalancers": [
+          {
+            "ContainerName": "api",
+            "ContainerPort": 3001,
+            "TargetGroupArn": {
+              "Ref": "ApiTarget"
+            }
+          }
+        ]
+      }
+    },
+    "WorkerTask": {
+      "Type": "AWS::ECS::TaskDefinition",
+      "Properties": {
+        "RequiresCompatibilities": [
+          "FARGATE"
+        ],
+        "NetworkMode": "awsvpc",
+        "Cpu": "1024",
+        "Memory": "2048",
+        "ExecutionRoleArn": {
+          "Fn::GetAtt": [
+            "ExecutionRole",
+            "Arn"
+          ]
+        },
+        "TaskRoleArn": {
+          "Fn::GetAtt": [
+            "TaskRole",
+            "Arn"
+          ]
+        },
+        "ContainerDefinitions": [
+          {
+            "Name": "worker",
+            "Image": {
+              "Fn::Sub": "${ImageBase}-worker:${ReleaseVersion}"
+            },
+            "Essential": true,
+            "Environment": [
+              {
+                "Name": "NODE_ENV",
+                "Value": "production"
+              },
+              {
+                "Name": "AUTOVISION_TABLE",
+                "Value": {
+                  "Ref": "AppTable"
+                }
+              },
+              {
+                "Name": "AUTOVISION_DEPLOYMENT_MODE",
+                "Value": {
+                  "Ref": "DeploymentMode"
+                }
+              },
+              {
+                "Name": "AUTOVISION_ROOT_USER",
+                "Value": {
+                  "Ref": "RootUsername"
+                }
+              },
+              {
+                "Name": "AUTOVISION_ROOT_PASSWORD",
+                "Value": {
+                  "Ref": "RootPassword"
+                }
+              },
+              {
+                "Name": "AUTOVISION_SESSION_SECRET",
+                "Value": {
+                  "Ref": "SessionSecret"
+                }
+              },
+              {
+                "Name": "AUTOVISION_QUEUE_URL",
+                "Value": {
+                  "Ref": "Queue"
+                }
+              },
+              {
+                "Name": "AUTOVISION_EVIDENCE_BUCKET",
+                "Value": {
+                  "Ref": "EvidenceBucket"
+                }
+              },
+              {
+                "Name": "AUTOVISION_EVENT_BUS",
+                "Value": {
+                  "Ref": "EventBus"
+                }
+              },
+              {
+                "Name": "STRIPE_SECRET_KEY",
+                "Value": {
+                  "Ref": "StripeSecretKey"
+                }
+              },
+              {
+                "Name": "STRIPE_WEBHOOK_SECRET",
+                "Value": {
+                  "Ref": "StripeWebhookSecret"
+                }
+              },
+              {
+                "Name": "STRIPE_STARTER_PRICE_ID",
+                "Value": {
+                  "Ref": "StripeStarterPriceId"
+                }
+              },
+              {
+                "Name": "STRIPE_SCALE_PRICE_ID",
+                "Value": {
+                  "Ref": "StripeScalePriceId"
+                }
+              },
+              {
+                "Name": "AUTOVISION_SES_FROM",
+                "Value": {
+                  "Ref": "SesFrom"
+                }
+              },
+              {
+                "Name": "AUTOVISION_WHATSAPP_ORIGINATION_ID",
+                "Value": {
+                  "Ref": "WhatsappOriginationId"
+                }
+              },
+              {
+                "Name": "AUTOVISION_NOTIFICATION_RECIPIENTS",
+                "Value": {
+                  "Ref": "NotificationRecipients"
+                }
+              },
+              {
+                "Name": "AUTOVISION_VISION_URL",
+                "Value": "http://localhost:8000"
+              },
+              {
+                "Name": "BEDROCK_MODEL_ID",
+                "Value": {
+                  "Ref": "BedrockModelId"
+                }
+              },
+              {
+                "Name": "AUTOVISION_NOTIFICATION_MODE",
+                "Value": "aws"
+              }
+            ],
+            "LogConfiguration": {
+              "LogDriver": "awslogs",
+              "Options": {
+                "awslogs-group": {
+                  "Ref": "LogGroup"
+                },
+                "awslogs-region": {
+                  "Ref": "AWS::Region"
+                },
+                "awslogs-stream-prefix": "worker"
+              }
+            }
+          },
+          {
+            "Name": "vision",
+            "Image": {
+              "Fn::Sub": "${ImageBase}-vision:${ReleaseVersion}"
+            },
+            "Essential": true,
+            "PortMappings": [
+              {
+                "ContainerPort": 8000
+              }
+            ],
+            "LogConfiguration": {
+              "LogDriver": "awslogs",
+              "Options": {
+                "awslogs-group": {
+                  "Ref": "LogGroup"
+                },
+                "awslogs-region": {
+                  "Ref": "AWS::Region"
+                },
+                "awslogs-stream-prefix": "vision"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "WorkerService": {
+      "Type": "AWS::ECS::Service",
+      "Properties": {
+        "Cluster": {
+          "Ref": "Cluster"
+        },
+        "LaunchType": "FARGATE",
+        "DesiredCount": {
+          "Ref": "DesiredCount"
+        },
+        "TaskDefinition": {
+          "Ref": "WorkerTask"
+        },
+        "NetworkConfiguration": {
+          "AwsvpcConfiguration": {
+            "AssignPublicIp": "DISABLED",
+            "Subnets": {
+              "Ref": "PrivateSubnets"
+            },
+            "SecurityGroups": [
+              {
+                "Ref": "ServiceSG"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "WebListenerRule": {
+      "Type": "AWS::ElasticLoadBalancingV2::ListenerRule",
+      "Properties": {
+        "ListenerArn": {
+          "Ref": "ListenerArn"
+        },
+        "Priority": {
+          "Ref": "WebListenerPriority"
+        },
+        "Conditions": [
+          {
+            "Field": "host-header",
+            "HostHeaderConfig": {
+              "Values": [
+                {
+                  "Ref": "HostHeader"
+                }
+              ]
+            }
+          }
+        ],
+        "Actions": [
+          {
+            "Type": "forward",
+            "TargetGroupArn": {
+              "Ref": "WebTarget"
+            }
+          }
+        ]
+      }
+    },
+    "ApiListenerRule": {
+      "Type": "AWS::ElasticLoadBalancingV2::ListenerRule",
+      "Properties": {
+        "ListenerArn": {
+          "Ref": "ListenerArn"
+        },
+        "Priority": {
+          "Ref": "ApiListenerPriority"
+        },
+        "Conditions": [
+          {
+            "Field": "host-header",
+            "HostHeaderConfig": {
+              "Values": [
+                {
+                  "Ref": "HostHeader"
+                }
+              ]
+            }
+          },
+          {
+            "Field": "path-pattern",
+            "PathPatternConfig": {
+              "Values": [
+                "/api/*"
+              ]
+            }
+          }
+        ],
+        "Actions": [
+          {
+            "Type": "forward",
+            "TargetGroupArn": {
+              "Ref": "ApiTarget"
+            }
+          }
+        ]
+      }
+    },
+    "BedrockAccess": {
+      "Type": "AWS::IAM::Policy",
+      "Condition": "UseBedrock",
+      "Properties": {
+        "PolicyName": "autovision-bedrock",
+        "Roles": [
+          {
+            "Ref": "TaskRole"
+          }
+        ],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": "bedrock:InvokeModel",
+              "Resource": {
+                "Ref": "BedrockModelArn"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "IncidentRule": {
+      "Type": "AWS::Events::Rule",
+      "Properties": {
+        "EventBusName": {
+          "Ref": "EventBus"
+        },
+        "EventPattern": {
+          "source": [
+            "autovision"
+          ],
+          "detail-type": [
+            "IncidentCreated"
+          ]
+        },
+        "Targets": [
+          {
+            "Id": "IncidentQueue",
+            "Arn": {
+              "Fn::GetAtt": [
+                "Queue",
+                "Arn"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "QueuePolicy": {
+      "Type": "AWS::SQS::QueuePolicy",
+      "Properties": {
+        "Queues": [
+          {
+            "Ref": "Queue"
+          }
+        ],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "events.amazonaws.com"
+              },
+              "Action": "sqs:SendMessage",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "Queue",
+                  "Arn"
+                ]
+              },
+              "Condition": {
+                "ArnEquals": {
+                  "aws:SourceArn": {
+                    "Fn::GetAtt": [
+                      "IncidentRule",
+                      "Arn"
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "URL": {
+      "Value": {
+        "Fn::Sub": "https://${HostHeader}"
+      }
+    },
+    "Table": {
+      "Value": {
+        "Ref": "AppTable"
+      }
+    },
+    "EventBusName": {
+      "Value": {
+        "Ref": "EventBus"
+      }
+    },
+    "EvidenceBucketName": {
+      "Value": {
+        "Ref": "EvidenceBucket"
+      }
+    }
+  },
+  "Conditions": {
+    "UseBedrock": {
+      "Fn::Not": [
+        {
+          "Fn::Equals": [
+            {
+              "Ref": "BedrockModelArn"
+            },
+            ""
+          ]
+        }
+      ]
+    }
+  }
+}
+

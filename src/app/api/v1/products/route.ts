@@ -1,0 +1,2 @@
+import{NextResponse}from'next/server';import{store}from'@/lib/store';export async function GET(){return NextResponse.json((await store.products()).map(({stripePriceId,...product})=>({...product,available:Boolean(stripePriceId)})))}
+

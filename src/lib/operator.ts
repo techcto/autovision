@@ -1,0 +1,2 @@
+import{NextRequest}from'next/server';import{verifySession,sessionCookie}from'./session';import{store}from'./store';export async function operator(req:NextRequest){const s=await verifySession(req.cookies.get(sessionCookie)?.value,process.env.AUTOVISION_SESSION_SECRET??'');if(!s)return null;if(s.role==='root')return s;const m=await store.membership(s.orgId,s.id),user=await store.userById(s.id);if(!m||m.status!=='active'||user?.status!=='active')return null;return{...s,role:m.role}}
+

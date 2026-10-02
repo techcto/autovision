@@ -1,0 +1,237 @@
+{
+  "services": {
+    "autovision-web": {
+      "init": true,
+      "build": {
+        "context": ".",
+        "dockerfile": "devops/docker/Dockerfile.web"
+      },
+      "environment": {
+        "NODE_ENV": "production",
+        "PORT": "3000",
+        "AWS_REGION": "${AWS_REGION:-us-east-1}",
+        "AWS_ACCESS_KEY_ID": "local",
+        "AWS_SECRET_ACCESS_KEY": "local",
+        "AUTOVISION_DEPLOYMENT_MODE": "${AUTOVISION_DEPLOYMENT_MODE:-saas}",
+        "AUTOVISION_ROOT_USER": "${AUTOVISION_ROOT_USER:-root}",
+        "AUTOVISION_ROOT_PASSWORD": "${AUTOVISION_ROOT_PASSWORD:-autovision-local-change-me}",
+        "AUTOVISION_SESSION_SECRET": "${AUTOVISION_SESSION_SECRET:-autovision-local-session-secret-change-me}",
+        "AUTOVISION_DYNAMODB_ENDPOINT": "http://autovision-dynamodb:8000",
+        "AUTOVISION_TABLE": "autovision-local",
+        "AUTOVISION_QUEUE_URL": "http://autovision-queue:9324/queue/autovision-events",
+        "AUTOVISION_QUEUE_ENDPOINT": "http://autovision-queue:9324",
+        "AUTOVISION_LOCAL_QUEUE_AUTOCREATE": "true",
+        "AUTOVISION_EVIDENCE_BUCKET": "autovision-local-evidence",
+        "AUTOVISION_S3_ENDPOINT": "http://autovision-objects:9090",
+        "AUTOVISION_NOTIFICATION_MODE": "log",
+        "STRIPE_SECRET_KEY": "${STRIPE_SECRET_KEY:-}",
+        "STRIPE_WEBHOOK_SECRET": "${STRIPE_WEBHOOK_SECRET:-}",
+        "STRIPE_STARTER_PRICE_ID": "${STRIPE_STARTER_PRICE_ID:-}",
+        "STRIPE_SCALE_PRICE_ID": "${STRIPE_SCALE_PRICE_ID:-}",
+        "AUTOVISION_VISION_URL": "http://autovision-vision:8000"
+      },
+      "ports": [
+        "${AUTOVISION_WEB_PORT:-8081}:3000"
+      ],
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "wget",
+          "-qO-",
+          "http://127.0.0.1:3000/api/health"
+        ],
+        "interval": "10s",
+        "timeout": "5s",
+        "retries": 20,
+        "start_period": "20s"
+      },
+      "depends_on": {
+        "autovision-dynamodb": {
+          "condition": "service_started"
+        },
+        "autovision-queue": {
+          "condition": "service_healthy"
+        },
+        "autovision-objects": {
+          "condition": "service_healthy"
+        }
+      }
+    },
+    "autovision-api": {
+      "init": true,
+      "build": {
+        "context": ".",
+        "dockerfile": "devops/docker/Dockerfile.api"
+      },
+      "environment": {
+        "NODE_ENV": "production",
+        "PORT": "3001",
+        "AWS_REGION": "${AWS_REGION:-us-east-1}",
+        "AWS_ACCESS_KEY_ID": "local",
+        "AWS_SECRET_ACCESS_KEY": "local",
+        "AUTOVISION_DEPLOYMENT_MODE": "${AUTOVISION_DEPLOYMENT_MODE:-saas}",
+        "AUTOVISION_ROOT_USER": "${AUTOVISION_ROOT_USER:-root}",
+        "AUTOVISION_ROOT_PASSWORD": "${AUTOVISION_ROOT_PASSWORD:-autovision-local-change-me}",
+        "AUTOVISION_SESSION_SECRET": "${AUTOVISION_SESSION_SECRET:-autovision-local-session-secret-change-me}",
+        "AUTOVISION_DYNAMODB_ENDPOINT": "http://autovision-dynamodb:8000",
+        "AUTOVISION_TABLE": "autovision-local",
+        "AUTOVISION_QUEUE_URL": "http://autovision-queue:9324/queue/autovision-events",
+        "AUTOVISION_QUEUE_ENDPOINT": "http://autovision-queue:9324",
+        "AUTOVISION_LOCAL_QUEUE_AUTOCREATE": "true",
+        "AUTOVISION_EVIDENCE_BUCKET": "autovision-local-evidence",
+        "AUTOVISION_S3_ENDPOINT": "http://autovision-objects:9090",
+        "AUTOVISION_NOTIFICATION_MODE": "log",
+        "STRIPE_SECRET_KEY": "${STRIPE_SECRET_KEY:-}",
+        "STRIPE_WEBHOOK_SECRET": "${STRIPE_WEBHOOK_SECRET:-}",
+        "STRIPE_STARTER_PRICE_ID": "${STRIPE_STARTER_PRICE_ID:-}",
+        "STRIPE_SCALE_PRICE_ID": "${STRIPE_SCALE_PRICE_ID:-}",
+        "AUTOVISION_VISION_URL": "http://autovision-vision:8000"
+      },
+      "ports": [
+        "127.0.0.1:${AUTOVISION_API_PORT:-3101}:3001"
+      ],
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "wget",
+          "-qO-",
+          "http://127.0.0.1:3001/api/health"
+        ],
+        "interval": "10s",
+        "timeout": "5s",
+        "retries": 20,
+        "start_period": "20s"
+      },
+      "depends_on": {
+        "autovision-dynamodb": {
+          "condition": "service_started"
+        },
+        "autovision-queue": {
+          "condition": "service_healthy"
+        },
+        "autovision-objects": {
+          "condition": "service_healthy"
+        }
+      }
+    },
+    "autovision-worker": {
+      "init": true,
+      "build": {
+        "context": ".",
+        "dockerfile": "devops/docker/Dockerfile.worker"
+      },
+      "environment": {
+        "NODE_ENV": "production",
+        "PORT": "3000",
+        "AWS_REGION": "${AWS_REGION:-us-east-1}",
+        "AWS_ACCESS_KEY_ID": "local",
+        "AWS_SECRET_ACCESS_KEY": "local",
+        "AUTOVISION_DEPLOYMENT_MODE": "${AUTOVISION_DEPLOYMENT_MODE:-saas}",
+        "AUTOVISION_ROOT_USER": "${AUTOVISION_ROOT_USER:-root}",
+        "AUTOVISION_ROOT_PASSWORD": "${AUTOVISION_ROOT_PASSWORD:-autovision-local-change-me}",
+        "AUTOVISION_SESSION_SECRET": "${AUTOVISION_SESSION_SECRET:-autovision-local-session-secret-change-me}",
+        "AUTOVISION_DYNAMODB_ENDPOINT": "http://autovision-dynamodb:8000",
+        "AUTOVISION_TABLE": "autovision-local",
+        "AUTOVISION_QUEUE_URL": "http://autovision-queue:9324/queue/autovision-events",
+        "AUTOVISION_QUEUE_ENDPOINT": "http://autovision-queue:9324",
+        "AUTOVISION_LOCAL_QUEUE_AUTOCREATE": "true",
+        "AUTOVISION_EVIDENCE_BUCKET": "autovision-local-evidence",
+        "AUTOVISION_S3_ENDPOINT": "http://autovision-objects:9090",
+        "AUTOVISION_NOTIFICATION_MODE": "log",
+        "STRIPE_SECRET_KEY": "${STRIPE_SECRET_KEY:-}",
+        "STRIPE_WEBHOOK_SECRET": "${STRIPE_WEBHOOK_SECRET:-}",
+        "STRIPE_STARTER_PRICE_ID": "${STRIPE_STARTER_PRICE_ID:-}",
+        "STRIPE_SCALE_PRICE_ID": "${STRIPE_SCALE_PRICE_ID:-}",
+        "AUTOVISION_VISION_URL": "http://autovision-vision:8000"
+      },
+      "depends_on": {
+        "autovision-dynamodb": {
+          "condition": "service_started"
+        },
+        "autovision-queue": {
+          "condition": "service_healthy"
+        },
+        "autovision-objects": {
+          "condition": "service_healthy"
+        }
+      }
+    },
+    "autovision-dynamodb": {
+      "image": "amazon/dynamodb-local:2.6.1",
+      "command": [
+        "-jar",
+        "DynamoDBLocal.jar",
+        "-sharedDb",
+        "-dbPath",
+        "/home/dynamodblocal"
+      ],
+      "volumes": [
+        "autovision-dynamodb:/home/dynamodblocal"
+      ]
+    },
+    "autovision-queue": {
+      "image": "softwaremill/elasticmq-native:1.6.15",
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "wget",
+          "-qO-",
+          "http://127.0.0.1:9325"
+        ],
+        "interval": "5s",
+        "timeout": "3s",
+        "retries": 20
+      }
+    },
+    "autovision-objects": {
+      "image": "adobe/s3mock:latest",
+      "environment": {
+        "COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS": "autovision-local-evidence",
+        "COM_ADOBE_TESTING_S3MOCK_STORE_RETAIN_FILES_ON_EXIT": "true"
+      },
+      "volumes": [
+        "autovision-objects:/tmp/s3mock"
+      ],
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "wget",
+          "-qO-",
+          "http://127.0.0.1:9090/"
+        ],
+        "interval": "5s",
+        "timeout": "3s",
+        "retries": 30
+      }
+    },
+    "autovision-vision": {
+      "build": {
+        "context": ".",
+        "dockerfile": "devops/docker/Dockerfile.vision"
+      },
+      "init": true,
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8000/api/health')"
+        ],
+        "interval": "10s",
+        "timeout": "5s",
+        "retries": 20
+      }
+    }
+  },
+  "volumes": {
+    "autovision-dynamodb": {},
+    "autovision-objects": {}
+  },
+  "networks": {
+    "default": {
+      "name": "application-platforms-local",
+      "external": true
+    }
+  }
+}
+

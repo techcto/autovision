@@ -1,0 +1,2 @@
+import{NextRequest,NextResponse}from'next/server';import{agent}from'@/lib/http';import{validSignal,ingest}from'@/lib/signals';export async function POST(req:NextRequest){const id=await agent(req);if(!id)return NextResponse.json({error:'unauthorized'},{status:401});let v;try{v=await req.json()}catch{return NextResponse.json({error:'invalid JSON'},{status:400})}if(!validSignal(v))return NextResponse.json({error:'invalid signal'},{status:400});return NextResponse.json(await ingest(id.tenantId,id.agentId,v),{status:202})}
+

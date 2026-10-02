@@ -1,0 +1,39 @@
+[
+  {
+    "ParameterKey": "VpcId",
+    "ParameterValue": "vpc-REPLACE"
+  },
+  {
+    "ParameterKey": "PublicSubnets",
+    "ParameterValue": "subnet-PUBLIC-A,subnet-PUBLIC-B"
+  },
+  {
+    "ParameterKey": "PrivateSubnets",
+    "ParameterValue": "subnet-PRIVATE-A,subnet-PRIVATE-B"
+  },
+  {
+    "ParameterKey": "ImageBase",
+    "ParameterValue": "ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/solodev/autovision"
+  },
+  {
+    "ParameterKey": "ReleaseVersion",
+    "ParameterValue": "0.1.0"
+  },
+  {
+    "ParameterKey": "RootPassword",
+    "ParameterValue": "REPLACE_WITH_PRIVATE_PASSWORD"
+  },
+  {
+    "ParameterKey": "SessionSecret",
+    "ParameterValue": "REPLACE_WITH_RANDOM_SECRET_AT_LEAST_32_CHARACTERS"
+  },
+  {
+    "ParameterKey": "DeploymentMode",
+    "ParameterValue": "on-premise"
+  },
+  {
+    "ParameterKey": "CertificateArn",
+    "ParameterValue": ""
+  }
+]
+

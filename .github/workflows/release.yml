@@ -1,0 +1,70 @@
+name: Release AutoVision
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      release_version: {description: Immutable version without leading v, required: true}
+permissions: {contents: read, id-token: write}
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+  REPOSITORY_PREFIX: ${{ vars.REPOSITORY_PREFIX || 'solodev/autovision' }}
+  ASSETS_BUCKET: ${{ vars.ASSETS_BUCKET || 'autovision-api' }}
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 26, cache: npm}
+      - run: npm ci && npm run typecheck && npm run test:web && npm run build
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.13'}
+      - run: pip install cfn-lint && cfn-lint devops/cloudformation/*.yaml
+      - uses: aws-actions/configure-aws-credentials@v4
+        if: ${{ vars.AWS_ROLE_ARN != '' }}
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+      - uses: aws-actions/configure-aws-credentials@v4
+        if: ${{ vars.AWS_ROLE_ARN == '' }}
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          aws-access-key-id: ${{ vars.MP_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.MP_AWS_SECRET_ACCESS_KEY }}
+      - id: login
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          registries: ${{ vars.MP_AWS_ACCOUNT_ID || '' }}
+      - uses: docker/setup-buildx-action@v3
+      - name: Build and publish service images
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.release_version }}
+          REGISTRY: ${{ vars.MP_AWS_ECR || steps.login.outputs.registry }}
+        run: |
+          version="$INPUT_VERSION"
+          if [ -z "$version" ]; then version="${GITHUB_REF_NAME#v}"; fi
+          case "$version" in ''|*[!0-9A-Za-z.-]*) exit 1;; esac
+          test -n "$ASSETS_BUCKET"
+          echo "RELEASE_VERSION=$version" >> "$GITHUB_ENV"
+          echo "MP_AWS_ECR=$REGISTRY" >> "$GITHUB_ENV"
+          for service in web api worker vision; do
+            repository="$REPOSITORY_PREFIX-$service"
+            aws ecr describe-repositories --repository-names "$repository" >/dev/null 2>&1 || aws ecr create-repository --repository-name "$repository" --image-scanning-configuration scanOnPush=true >/dev/null
+            docker buildx build --platform linux/amd64 --provenance=false --sbom=false --push -f "devops/docker/Dockerfile.$service" -t "$REGISTRY/$REPOSITORY_PREFIX-$service:$version" .
+          done
+      - name: Publish deployment templates
+        run: |
+          bash devops/public-assets.sh
+          for template in devops/cloudformation/*.yaml; do
+            base="$(basename "$template" .yaml)"
+            aws s3 cp "$template" "s3://$ASSETS_BUCKET/cloudformation/$base-$RELEASE_VERSION.yaml" --content-type text/yaml --cache-control 'max-age=31536000,immutable'
+            aws s3 cp "$template" "s3://$ASSETS_BUCKET/cloudformation/$base.yaml" --content-type text/yaml --cache-control no-cache
+          done
+      - name: Submit Marketplace delivery changeset
+        if: ${{ vars.MP_AWS_MARKETPLACE_PRODUCT_ID != '' }}
+        env:
+          MP_AWS_MARKETPLACE_PRODUCT_ID: ${{ vars.MP_AWS_MARKETPLACE_PRODUCT_ID }}
+        run: bash devops/changeset.sh
+
+
