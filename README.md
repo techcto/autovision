@@ -27,3 +27,7 @@ Release deployment assets use the `autovision-api` S3 bucket. Private media stor
 
 The application domain is `autovision.dev`. Use an ACM certificate covering this domain. The full-stack template accepts an optional `HostedZoneId` to create its Route 53 alias; otherwise configure DNS separately. Publishing buckets already exist and are not created by the application templates.
 
+## License
+
+First-party project code is licensed under [AGPL-3.0-or-later](LICENSE). Commercial and hosted use are permitted under the AGPL; modified network versions must offer their Corresponding Source to users as required by the license. Third-party components retain their own licenses. See [commercial licensing](COMMERCIAL-LICENSE.md) for alternative terms available by separate agreement for maintainer-owned code.
+
