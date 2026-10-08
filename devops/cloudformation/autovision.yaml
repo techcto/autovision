@@ -101,6 +101,21 @@
       "Type": "String",
       "Default": "",
       "Description": "Optional Route 53 public zone for the application alias"
+    },
+    "MarketplaceUrl": {
+      "Type": "String",
+      "Default": "https://aws.amazon.com/marketplace/pp/prodview-f4z2vbrqoh55u",
+      "AllowedPattern": "^$|^https://aws\\.amazon\\.com/marketplace/[^\\s]+$",
+      "Description": "Buyer-facing Marketplace listing URL. Leave empty to hide the subscription button."
+    },
+    "EventBridgeEnabled": {
+      "Type": "String",
+      "Default": "true",
+      "AllowedValues": [
+        "true",
+        "false"
+      ],
+      "Description": "Use EventBridge to deliver incidents. Set false for direct SQS delivery."
     }
   },
   "Conditions": {
@@ -138,6 +153,14 @@
             ""
           ]
         }
+      ]
+    },
+    "UseEventBridge": {
+      "Fn::Equals": [
+        {
+          "Ref": "EventBridgeEnabled"
+        },
+        "true"
       ]
     }
   },
@@ -465,7 +488,8 @@
         "Name": {
           "Fn::Sub": "${AWS::StackName}-events"
         }
-      }
+      },
+      "Condition": "UseEventBridge"
     },
     "LogGroup": {
       "Type": "AWS::Logs::LogGroup",
@@ -563,14 +587,22 @@
                   }
                 },
                 {
-                  "Effect": "Allow",
-                  "Action": "events:PutEvents",
-                  "Resource": {
-                    "Fn::GetAtt": [
-                      "EventBus",
-                      "Arn"
-                    ]
-                  }
+                  "Fn::If": [
+                    "UseEventBridge",
+                    {
+                      "Effect": "Allow",
+                      "Action": "events:PutEvents",
+                      "Resource": {
+                        "Fn::GetAtt": [
+                          "EventBus",
+                          "Arn"
+                        ]
+                      }
+                    },
+                    {
+                      "Ref": "AWS::NoValue"
+                    }
+                  ]
                 },
                 {
                   "Effect": "Allow",
@@ -667,10 +699,18 @@
                 }
               },
               {
-                "Name": "AUTOVISION_EVENT_BUS",
-                "Value": {
-                  "Ref": "EventBus"
-                }
+                "Fn::If": [
+                  "UseEventBridge",
+                  {
+                    "Name": "AUTOVISION_EVENT_BUS",
+                    "Value": {
+                      "Ref": "EventBus"
+                    }
+                  },
+                  {
+                    "Ref": "AWS::NoValue"
+                  }
+                ]
               },
               {
                 "Name": "STRIPE_SECRET_KEY",
@@ -727,6 +767,12 @@
               {
                 "Name": "AUTOVISION_NOTIFICATION_MODE",
                 "Value": "aws"
+              },
+              {
+                "Name": "AUTOVISION_MARKETPLACE_URL",
+                "Value": {
+                  "Ref": "MarketplaceUrl"
+                }
               }
             ],
             "LogConfiguration": {
@@ -865,10 +911,18 @@
                 }
               },
               {
-                "Name": "AUTOVISION_EVENT_BUS",
-                "Value": {
-                  "Ref": "EventBus"
-                }
+                "Fn::If": [
+                  "UseEventBridge",
+                  {
+                    "Name": "AUTOVISION_EVENT_BUS",
+                    "Value": {
+                      "Ref": "EventBus"
+                    }
+                  },
+                  {
+                    "Ref": "AWS::NoValue"
+                  }
+                ]
               },
               {
                 "Name": "STRIPE_SECRET_KEY",
@@ -1086,10 +1140,18 @@
                 }
               },
               {
-                "Name": "AUTOVISION_EVENT_BUS",
-                "Value": {
-                  "Ref": "EventBus"
-                }
+                "Fn::If": [
+                  "UseEventBridge",
+                  {
+                    "Name": "AUTOVISION_EVENT_BUS",
+                    "Value": {
+                      "Ref": "EventBus"
+                    }
+                  },
+                  {
+                    "Ref": "AWS::NoValue"
+                  }
+                ]
               },
               {
                 "Name": "STRIPE_SECRET_KEY",
@@ -1265,7 +1327,8 @@
             }
           }
         ]
-      }
+      },
+      "Condition": "UseEventBridge"
     },
     "QueuePolicy": {
       "Type": "AWS::SQS::QueuePolicy",
@@ -1303,7 +1366,8 @@
             }
           ]
         }
-      }
+      },
+      "Condition": "UseEventBridge"
     },
     "ApplicationDns": {
       "Type": "AWS::Route53::RecordSet",
@@ -1354,7 +1418,13 @@
     },
     "EventBusName": {
       "Value": {
-        "Ref": "EventBus"
+        "Fn::If": [
+          "UseEventBridge",
+          {
+            "Ref": "EventBus"
+          },
+          "disabled-direct-sqs"
+        ]
       }
     },
     "EvidenceBucketName": {

@@ -90,13 +90,13 @@
     },
     "WebListenerPriority": {
       "Type": "Number",
-      "Default": 101,
+      "Default": 301,
       "MinValue": 1,
       "MaxValue": 49999
     },
     "ApiListenerPriority": {
       "Type": "Number",
-      "Default": 100,
+      "Default": 300,
       "MinValue": 1,
       "MaxValue": 49999
     },
@@ -109,6 +109,41 @@
       "Type": "String",
       "Default": "",
       "Description": "ARN authorized for bedrock:InvokeModel; include inference profiles as required"
+    },
+    "CertificateArn": {
+      "Type": "String",
+      "Default": "",
+      "Description": "Optional issued ACM certificate in this region, added to the existing HTTPS listener."
+    },
+    "HostedZoneId": {
+      "Type": "String",
+      "Default": "",
+      "Description": "Optional public Route 53 zone for HostHeader."
+    },
+    "LoadBalancerDnsName": {
+      "Type": "String",
+      "Default": "",
+      "Description": "Existing ALB DNS name, required with HostedZoneId."
+    },
+    "LoadBalancerCanonicalHostedZoneId": {
+      "Type": "String",
+      "Default": "",
+      "Description": "Existing ALB canonical hosted zone ID, required with HostedZoneId."
+    },
+    "MarketplaceUrl": {
+      "Type": "String",
+      "Default": "https://aws.amazon.com/marketplace/pp/prodview-f4z2vbrqoh55u",
+      "AllowedPattern": "^$|^https://aws\\.amazon\\.com/marketplace/[^\\s]+$",
+      "Description": "Buyer-facing Marketplace listing URL. Leave empty to hide the subscription button."
+    },
+    "EventBridgeEnabled": {
+      "Type": "String",
+      "Default": "true",
+      "AllowedValues": [
+        "true",
+        "false"
+      ],
+      "Description": "Use EventBridge to deliver incidents. Set false for direct SQS delivery."
     }
   },
   "Resources": {
@@ -267,7 +302,8 @@
         "Name": {
           "Fn::Sub": "${AWS::StackName}-events"
         }
-      }
+      },
+      "Condition": "UseEventBridge"
     },
     "LogGroup": {
       "Type": "AWS::Logs::LogGroup",
@@ -365,14 +401,22 @@
                   }
                 },
                 {
-                  "Effect": "Allow",
-                  "Action": "events:PutEvents",
-                  "Resource": {
-                    "Fn::GetAtt": [
-                      "EventBus",
-                      "Arn"
-                    ]
-                  }
+                  "Fn::If": [
+                    "UseEventBridge",
+                    {
+                      "Effect": "Allow",
+                      "Action": "events:PutEvents",
+                      "Resource": {
+                        "Fn::GetAtt": [
+                          "EventBus",
+                          "Arn"
+                        ]
+                      }
+                    },
+                    {
+                      "Ref": "AWS::NoValue"
+                    }
+                  ]
                 },
                 {
                   "Effect": "Allow",
@@ -469,10 +513,18 @@
                 }
               },
               {
-                "Name": "AUTOVISION_EVENT_BUS",
-                "Value": {
-                  "Ref": "EventBus"
-                }
+                "Fn::If": [
+                  "UseEventBridge",
+                  {
+                    "Name": "AUTOVISION_EVENT_BUS",
+                    "Value": {
+                      "Ref": "EventBus"
+                    }
+                  },
+                  {
+                    "Ref": "AWS::NoValue"
+                  }
+                ]
               },
               {
                 "Name": "STRIPE_SECRET_KEY",
@@ -529,6 +581,12 @@
               {
                 "Name": "AUTOVISION_NOTIFICATION_MODE",
                 "Value": "aws"
+              },
+              {
+                "Name": "AUTOVISION_MARKETPLACE_URL",
+                "Value": {
+                  "Ref": "MarketplaceUrl"
+                }
               }
             ],
             "LogConfiguration": {
@@ -667,10 +725,18 @@
                 }
               },
               {
-                "Name": "AUTOVISION_EVENT_BUS",
-                "Value": {
-                  "Ref": "EventBus"
-                }
+                "Fn::If": [
+                  "UseEventBridge",
+                  {
+                    "Name": "AUTOVISION_EVENT_BUS",
+                    "Value": {
+                      "Ref": "EventBus"
+                    }
+                  },
+                  {
+                    "Ref": "AWS::NoValue"
+                  }
+                ]
               },
               {
                 "Name": "STRIPE_SECRET_KEY",
@@ -888,10 +954,18 @@
                 }
               },
               {
-                "Name": "AUTOVISION_EVENT_BUS",
-                "Value": {
-                  "Ref": "EventBus"
-                }
+                "Fn::If": [
+                  "UseEventBridge",
+                  {
+                    "Name": "AUTOVISION_EVENT_BUS",
+                    "Value": {
+                      "Ref": "EventBus"
+                    }
+                  },
+                  {
+                    "Ref": "AWS::NoValue"
+                  }
+                ]
               },
               {
                 "Name": "STRIPE_SECRET_KEY",
@@ -1137,7 +1211,8 @@
             }
           }
         ]
-      }
+      },
+      "Condition": "UseEventBridge"
     },
     "QueuePolicy": {
       "Type": "AWS::SQS::QueuePolicy",
@@ -1175,6 +1250,45 @@
             }
           ]
         }
+      },
+      "Condition": "UseEventBridge"
+    },
+    "ApplicationCertificate": {
+      "Type": "AWS::ElasticLoadBalancingV2::ListenerCertificate",
+      "Condition": "AttachCertificate",
+      "Properties": {
+        "ListenerArn": {
+          "Ref": "ListenerArn"
+        },
+        "Certificates": [
+          {
+            "CertificateArn": {
+              "Ref": "CertificateArn"
+            }
+          }
+        ]
+      }
+    },
+    "ApplicationDns": {
+      "Type": "AWS::Route53::RecordSet",
+      "Condition": "CreateDns",
+      "Properties": {
+        "HostedZoneId": {
+          "Ref": "HostedZoneId"
+        },
+        "Name": {
+          "Ref": "HostHeader"
+        },
+        "Type": "A",
+        "AliasTarget": {
+          "DNSName": {
+            "Ref": "LoadBalancerDnsName"
+          },
+          "HostedZoneId": {
+            "Ref": "LoadBalancerCanonicalHostedZoneId"
+          },
+          "EvaluateTargetHealth": false
+        }
       }
     }
   },
@@ -1191,7 +1305,13 @@
     },
     "EventBusName": {
       "Value": {
-        "Ref": "EventBus"
+        "Fn::If": [
+          "UseEventBridge",
+          {
+            "Ref": "EventBus"
+          },
+          "disabled-direct-sqs"
+        ]
       }
     },
     "EvidenceBucketName": {
@@ -1210,6 +1330,86 @@
             },
             ""
           ]
+        }
+      ]
+    },
+    "AttachCertificate": {
+      "Fn::Not": [
+        {
+          "Fn::Equals": [
+            {
+              "Ref": "CertificateArn"
+            },
+            ""
+          ]
+        }
+      ]
+    },
+    "CreateDns": {
+      "Fn::Not": [
+        {
+          "Fn::Equals": [
+            {
+              "Ref": "HostedZoneId"
+            },
+            ""
+          ]
+        }
+      ]
+    },
+    "UseEventBridge": {
+      "Fn::Equals": [
+        {
+          "Ref": "EventBridgeEnabled"
+        },
+        "true"
+      ]
+    }
+  },
+  "Rules": {
+    "DnsRequiresAlb": {
+      "RuleCondition": {
+        "Fn::Not": [
+          {
+            "Fn::Equals": [
+              {
+                "Ref": "HostedZoneId"
+              },
+              ""
+            ]
+          }
+        ]
+      },
+      "Assertions": [
+        {
+          "Assert": {
+            "Fn::Not": [
+              {
+                "Fn::Equals": [
+                  {
+                    "Ref": "LoadBalancerDnsName"
+                  },
+                  ""
+                ]
+              }
+            ]
+          },
+          "AssertDescription": "Supply LoadBalancerDnsName with HostedZoneId."
+        },
+        {
+          "Assert": {
+            "Fn::Not": [
+              {
+                "Fn::Equals": [
+                  {
+                    "Ref": "LoadBalancerCanonicalHostedZoneId"
+                  },
+                  ""
+                ]
+              }
+            ]
+          },
+          "AssertDescription": "Supply LoadBalancerCanonicalHostedZoneId with HostedZoneId."
         }
       ]
     }
