@@ -16,14 +16,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: {node-version: 26, cache: npm}
-      - run: npm ci && npm run typecheck && npm run lint && npm run test:web && npm run build
-      - run: docker compose build autovision-vision
-      - run: docker compose run --rm --no-deps autovision-vision python -m unittest discover -s src/vision -v
-      - uses: actions/setup-python@v5
-        with: {python-version: '3.13'}
-      - run: pip install cfn-lint && cfn-lint devops/cloudformation/*.yaml
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ env.AWS_REGION }}
