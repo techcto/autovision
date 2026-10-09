@@ -5,7 +5,7 @@ AAAAA U   U   T   O   O V   V   I    SSS    I   O   O N N N
 A   A U   U   T   O   O  V V    I       S   I   O   O N  NN
 A   A  UUU    T    OOO    V   IIIII SSSS  IIIII  OOO  N   N
 
-IMAGE PAIRS IN. ACTIONABLE SIGNALS OUT.
+GIVE YOUR APPLICATION A PAIR OF EYES.
 ```
 
 # AutoVision
@@ -13,7 +13,7 @@ IMAGE PAIRS IN. ACTIONABLE SIGNALS OUT.
 [![CI](https://github.com/techcto/autovision/actions/workflows/ci.yml/badge.svg)](https://github.com/techcto/autovision/actions/workflows/ci.yml)
 [![Open in GitHub](https://img.shields.io/badge/Open%20in-GitHub-181717?logo=github)](https://github.com/techcto/autovision)
 
-AutoVision is an open-source image-comparison API that turns consecutive frames into motion observations. It combines a real OpenCV service with organization-scoped API keys, usage quotas, payment-plan plumbing, and a deployable AWS operating model.
+AutoVision is an open-source visual-analysis service for applications, camera adapters, and AI agents. Its local development build analyzes images and sampled video with OpenCV, adds Amazon Nova Lite scene summaries and advisory package boxes, and exposes the results through REST and MCP. SaaS and private installations share the same codebase.
 
 [Website](https://autovision.dev) · [Source](https://github.com/techcto/autovision) · [Deployment guide](devops/cloudformation/README.md)
 
@@ -25,15 +25,31 @@ AutoVision is an open-source image-comparison API that turns consecutive frames 
 
 Camera feeds produce far more footage than a person can continuously inspect. Applications need a small, predictable API that can turn image changes into structured observations without becoming a camera vendor or rebuilding a vision pipeline. AutoVision starts with a bounded, reproducible primitive: compare two images and return motion observations.
 
-## Hackathon Pitch
+## Hackathon Pitch — OpenCV AI Competition 2026
 
-**Image pairs in. Actionable signals out.** AutoVision makes computer-vision observations available as an API, while its sensor demonstration shows how an observation becomes a durable incident and an asynchronous email notification. The API is independently useful and can feed another incident-management application.
+**Give your application a pair of eyes.** AutoVision turns images and short clips into measurable visual signals: motion across time, pedestrian detections, and optional Nova Lite scene descriptions and package locations. Developers can use the same analysis through an interactive demo, REST API, or MCP tool instead of rebuilding a vision service for every application.
 
-For the [AWS CDS Agentic AI Partner Hackathon](https://aws-cds-partner.devpost.com/), demonstrate the actual SES notification call with configured AWS permissions and verified sending identities. Local log-mode messages are not proof of production delivery. Include the architecture, a working demonstration, and judge-access instructions; do not claim future integrations as completed features.
+AutoVision is being prepared for the [OpenCV AI Competition 2026, powered by AWS](https://opencv26.devpost.com/). OpenCV performs the actual image processing; AWS supplies the deployment platform and optional Bedrock inference. The intended demonstration combines a camera-style clip, explainable results, private job history, and an agent consuming the same tools.
+
+The core service uses **OpenCV 5.0.0** for image decoding, resizing, grayscale conversion, frame differencing, thresholding, changed-pixel measurements and JPEG previews. Pedestrian detection uses a separately isolated OpenCV 4.13 HOG adapter; its boxes are not described as OpenCV 5 object inference. Nova Lite supplies optional scene summaries and advisory package boxes. REST and MCP share this pipeline.
+
+### Technical report and reproducible evaluation
+
+AutoVision serves developers adding visual observations to camera, workflow and agent applications. Browser sampling keeps original video/audio local and sends bounded image samples. Jobs retain one small thumbnail and structured observations, not the original clip. See the [architecture diagram](public/architecture.svg) and [editable source](devops/testing/architecture.mmd).
+
+The synthetic evaluation uses five repetitions per two-frame 320×180 sequence. On local x86-64 Docker on October 9, 2026, measured changed-pixel fractions exactly matched generated masks: 0%, 5%, 50% and 100%. Median vision latencies, including pedestrian subprocess overhead, were 483, 448, 471 and 479 ms. These are machine-specific measurements, not throughput guarantees or real-world detector accuracy.
+
+The lighting-change case documents a failure mode: brightness shifts trigger motion without proving an intruder. HOG can miss people and produce false positives. Nova grounding is advisory, not a calibrated probability; sampled frames can miss events. Smoke/fire require separate validation and cannot replace certified alarms. Embedded image instructions are untrusted.
+
+Reproduce with `docker compose run --rm --no-deps autovision-vision python -m unittest discover -s src/vision -v` and `docker compose run --rm --no-deps autovision-vision python src/vision/evaluate.py`. Run `npm run test:mcp:local`; add `AUTOVISION_TEST_BEDROCK=true` when dedicated local credentials are configured.
+
+Submission packaging includes the submitted revision, setup, report with representative-media evaluation, exported architecture, judge access and a public/unlisted video no longer than five minutes. Single-call classification does not establish the optional Agentic Vision award; COOL acceleration is not claimed. Follow the [requirements](https://opencv26.devpost.com/) and [rules](https://opencv26.devpost.com/rules). The page displays conflicting October 26 cutoff times; use the earlier 11:45 PM Pacific cutoff unless clarified.
 
 ## Try AutoVision
 
-Open [autovision.dev](https://autovision.dev) and sign in with an account supplied by the deployment owner. Hosted launch credentials are private and are **not** the local development defaults. In SaaS mode, signup creates a personal workspace; private installations disable public signup and billing.
+For the latest development demo, start the local stack below and open [localhost:8081](http://localhost:8081). Upload an image or short video, or click an illustrated sample clip. Enable Bedrock for scene summaries and package boxes when configured. See the local [API reference](http://localhost:8081/api-reference) and [MCP guide](http://localhost:8081/docs/mcp).
+
+The hosted site is [autovision.dev](https://autovision.dev); its deployment may lag the local build. Sign in with an account supplied by the deployment owner. Hosted launch credentials are private and are **not** the local development defaults. In SaaS mode, signup creates a personal workspace; private installations disable public signup and billing.
 
 1. Open Settings and create an API key. Copy it when shown; only its hash is stored.
 2. Send the synthetic image-pair request in the API section below.
@@ -48,7 +64,9 @@ The current hosted stack, `autovision-apphub-v011`, runs on the shared AppHub Fa
 - Deterministic demonstration rules for smoke, temperature, and CO readings; motion and person signals are also accepted.
 - Asynchronous incident processing with optional Bedrock enrichment and configured SES email delivery.
 - Bearer API keys revealed once at creation and stored as hashes.
-- OpenCV image-pair motion comparisons with monthly usage accounting.
+- OpenCV motion measurements and pedestrian boxes for images and up to 12 sampled video frames.
+- Optional Nova Lite summaries and advisory package boxes on the first, middle, and last supplied frames.
+- REST and MCP analysis with shared API keys; session-authorized manual runs and private seven-day job history.
 - SaaS and private-install modes using the same application images.
 - Stripe Checkout and signed webhook integration, activated only after keys and price IDs are configured.
 
@@ -59,8 +77,8 @@ The current hosted stack, `autovision-apphub-v011`, runs on the shared AppHub Fa
 | Web | Next.js/React console, workspace selection, devices, incidents, users, settings |
 | API | Next.js route handlers under `src/app/api`, authentication, tenant-scoped operations |
 | Worker | SQS incident processing, optional Bedrock assessment, configured email notification |
-| Vision | Internal OpenCV service for consecutive image-pair motion detection |
-| Persistence | DynamoDB, private S3 media storage, SQS and a dead-letter queue |
+| Vision | OpenCV motion/pedestrian analysis plus optional Nova Lite object grounding |
+| Persistence | DynamoDB job results/thumbnails, private evidence S3, SQS and a dead-letter queue; original demo videos are not stored |
 | Local runtime | Root Docker Compose, Dockerfiles in `devops`, DynamoDB Local and ElasticMQ |
 | AWS runtime | ECS Fargate, ALB, IAM, CloudWatch, optional ACM HTTPS and Route 53 aliases |
 | Delivery | GitHub Actions, versioned containers, S3 CloudFormation assets, Marketplace changesets |
@@ -78,7 +96,7 @@ cp .env.example .env
 bash app.sh up
 ```
 
-Open [http://localhost:8081](http://localhost:8081). Local username: `root`; local password: `autovision-local-change-me`. Change `AUTOVISION_ROOT_PASSWORD` and `AUTOVISION_SESSION_SECRET` before exposing the app outside your development machine. Local mode defaults to SaaS; AWS launch parameters choose the deployed mode independently.
+Open [http://localhost:8081](http://localhost:8081). Local username: `root`; local password: `autovision-local-change-me`. Change `AUTOVISION_ROOT_PASSWORD` and `AUTOVISION_SESSION_SECRET` before exposing the app outside your development machine. Local mode defaults to a private installation: a demo homepage and one root user, with signup and billing disabled. AWS launch parameters choose the deployed mode independently.
 
 ```bash
 curl --fail http://localhost:8081/api/health
@@ -152,7 +170,8 @@ Review each resource's deletion/retention policy before removing a stack. Export
 
 ## Scope And Safety
 
-- Implemented vision primitive: OpenCV motion comparison. No smoke/fire image classifier, COOL acceleration, or direct Ring integration is claimed.
+- OpenCV motion/pedestrian analysis and optional Nova Lite package grounding are implemented and tested locally. Smoke/fire grounding is opt-in and advisory; no trained or validated smoke/fire detector, COOL acceleration, or direct Ring integration is claimed.
+- Core processing uses OpenCV 5.0.0; isolated HOG uses OpenCV 4.13.0. Optional agentic-loop awards are not claimed.
 - Sensor thresholds are demonstration rules, not certified alarms or life-safety equipment.
 - Optional Bedrock failures do not prevent deterministic incident persistence.
 - AgentCore runtime integration is not implemented in this repository.
@@ -161,4 +180,23 @@ Review each resource's deletion/retention policy before removing a stack. Export
 ## License
 
 First-party code is [AGPL-3.0-or-later](LICENSE). Commercial and hosted use are allowed under its terms; modified network versions must offer Corresponding Source as required by the license. Third-party components retain their own licenses. Separate commercial terms for maintainer-owned code can be discussed through [commercial licensing](COMMERCIAL-LICENSE.md).
+
+## Adding detection categories
+
+AutoVision combines OpenCV motion/pedestrian measurements with optional Amazon Nova Lite image grounding. Package boxes are enabled with AI classification. They are labeled `source: bedrock`, `advisory: true`, with normalized `x/y/width/height`; no invented confidence score is returned. Nova checks the first, middle, and last supplied frames only (one image for an image job). `classification.checked_frames` reports their zero-based indices. Unchecked frames are not evidence of absence. Invalid AI JSON is rejected; measured OpenCV results remain available if AI fails.
+
+For Docker, set `AUTOVISION_AI_DETECTIONS=package,smoke,fire` in your ignored `.env`, then recreate the web/API containers using the same Compose overrides you launched with. These are visual candidates, not verified fire/smoke alarms. Steam, fog, reflections, occlusion and illustrations can cause mistakes. With AI disabled or Bedrock unavailable, package/smoke/fire detection is unavailable—not a negative result. Original videos are not stored.
+
+To add another AI category:
+
+1. Add an allowlisted label and precise visible-evidence description in `src/lib/ai-detections.ts`.
+2. Enable that label in the deployment environment; keep specialized categories opt-in.
+3. Add positive and negative test images/clips, including confusing look-alikes, with permission to use the media. Evaluate box overlap, missed objects and false positives on representative cameras.
+4. Verify REST, MCP, demo and private job history expose the same label, provenance and assessed frames. Run `npm run test:web` and `AUTOVISION_TEST_BEDROCK=true npm run test:mcp:local` against localhost.
+5. For a dedicated OpenCV/ONNX model instead of AI grounding, select a suitably licensed model with the required trained classes; pin weights and checksum, preprocessing, class map and version. Adapt its outputs to the same normalized detection contract and validate detector-specific thresholds. A prompt label does not train a model.
+6. Add temporal confirmation, representative validation and human review before connecting detections to SmartDetector actions. Smoke/fire vision must not replace certified physical detectors or emergency systems.
+
+AWS deployments must pass these settings and scoped Bedrock permissions through CloudFormation and reviewed change sets. Local changes do not publish an updated Marketplace product.
+
+Nova supports bounding-box image grounding: [AWS documentation](https://docs.aws.amazon.com/nova/latest/userguide/modalities-image.html).
 

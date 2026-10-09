@@ -1,0 +1,106 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "AutoVision local development identity: Nova Lite inference only. No console login.",
+  "Parameters": {
+    "UserName": {
+      "Type": "String",
+      "Default": "autovision-local-bedrock",
+      "AllowedPattern": "[a-zA-Z0-9+=,.@_-]+"
+    }
+  },
+  "Resources": {
+    "DeveloperUser": {
+      "Type": "AWS::IAM::User",
+      "Properties": {
+        "UserName": {
+          "Ref": "UserName"
+        },
+        "Policies": [
+          {
+            "PolicyName": "NovaLiteInferenceOnly",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": "bedrock:InvokeModel",
+                  "Resource": {
+                    "Fn::Sub": "arn:${AWS::Partition}:bedrock:us-east-1:${AWS::AccountId}:inference-profile/us.amazon.nova-lite-v1:0"
+                  }
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": "bedrock:InvokeModel",
+                  "Resource": [
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:bedrock:us-east-1::foundation-model/amazon.nova-lite-v1:0"
+                    },
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:bedrock:us-east-2::foundation-model/amazon.nova-lite-v1:0"
+                    },
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:bedrock:us-west-2::foundation-model/amazon.nova-lite-v1:0"
+                    }
+                  ],
+                  "Condition": {
+                    "StringEquals": {
+                      "bedrock:InferenceProfileArn": {
+                        "Fn::Sub": "arn:${AWS::Partition}:bedrock:us-east-1:${AWS::AccountId}:inference-profile/us.amazon.nova-lite-v1:0"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "DeveloperAccessKey": {
+      "Type": "AWS::IAM::AccessKey",
+      "Properties": {
+        "UserName": {
+          "Ref": "DeveloperUser"
+        },
+        "Serial": 1
+      }
+    },
+    "DeveloperCredentials": {
+      "Type": "AWS::SecretsManager::Secret",
+      "Properties": {
+        "Description": "AutoVision local Bedrock credentials. Never expose in stack outputs, logs, browser code, or source control.",
+        "SecretString": {
+          "Fn::Sub": [
+            "{\"aws_access_key_id\":\"${KeyId}\",\"aws_secret_access_key\":\"${KeySecret}\"}",
+            {
+              "KeyId": {
+                "Ref": "DeveloperAccessKey"
+              },
+              "KeySecret": {
+                "Fn::GetAtt": [
+                  "DeveloperAccessKey",
+                  "SecretAccessKey"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "UserName": {
+      "Value": {
+        "Ref": "DeveloperUser"
+      }
+    },
+    "CredentialsSecretArn": {
+      "Value": {
+        "Ref": "DeveloperCredentials"
+      }
+    },
+    "ModelId": {
+      "Value": "us.amazon.nova-lite-v1:0"
+    }
+  }
+}

@@ -3,6 +3,8 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 OPENCV_IO_MAX_IMAGE_PIXELS=16777216
 COPY src/vision/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt && useradd --uid 10001 --create-home app
+RUN python -m venv /opt/pedestrian && /opt/pedestrian/bin/pip install --no-cache-dir opencv-python-headless==4.13.0.92 numpy==2.5.3
+ENV AUTOVISION_PEDESTRIAN_PYTHON=/opt/pedestrian/bin/python
 COPY src/vision ./src/vision
 USER app
 EXPOSE 8000

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 520" role="img" aria-labelledby="title desc">
+  <title id="title">AutoVision architecture</title>
+  <desc id="desc">Browser samples, authenticated REST and MCP enter a Next.js API. OpenCV 5 measures motion, an isolated HOG adapter detects pedestrians, and optional Bedrock Nova Lite grounds packages. DynamoDB stores bounded tenant history and public usage limits.</desc>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#14b8a6"/></marker></defs>
+  <rect width="1000" height="520" fill="#0b1220"/>
+  <g font-family="Arial,sans-serif" fill="#e2e8f0">
+    <text x="40" y="45" font-size="26">AutoVision · bounded vision signals for applications</text>
+    <g fill="#142235" stroke="#14b8a6"><rect x="40" y="100" width="230" height="170" rx="14"/><rect x="370" y="140" width="230" height="120" rx="14"/><rect x="700" y="90" width="260" height="110" rx="14"/><rect x="700" y="230" width="260" height="90" rx="14"/><rect x="370" y="350" width="260" height="110" rx="14"/></g>
+    <text x="60" y="135" font-size="18">Browser / REST / MCP</text><text x="60" y="165" font-size="14">Video sampled in browser</text><text x="60" y="190" font-size="14">At most 12 image frames</text><text x="60" y="215" font-size="14">REST/MCP: organization key</text><text x="60" y="240" font-size="14">Manual run: signed-in session</text>
+    <text x="390" y="175" font-size="18">ALB → Next.js API</text><text x="390" y="205" font-size="14">ECS Fargate + task IAM role</text><text x="390" y="230" font-size="14">Structured JSON observations</text>
+    <text x="720" y="120" font-size="18">OpenCV 5 core pipeline</text><text x="720" y="150" font-size="14">Decode, resize, motion, thumbnail</text><text x="720" y="177" font-size="14">Isolated OpenCV 4 HOG adapter</text>
+    <text x="720" y="260" font-size="18">Bedrock Nova Lite · optional</text><text x="720" y="290" font-size="14">Selected frames; advisory grounding</text>
+    <text x="390" y="385" font-size="18">DynamoDB</text><text x="390" y="413" font-size="14">Tenant history + small thumbnail</text><text x="390" y="440" font-size="14">7-day TTL; public daily budget</text>
+    <text x="40" y="495" font-size="14">No original video/audio upload or storage · sampled images reach API and optional Bedrock · no safety certification</text>
+  </g>
+  <g stroke="#14b8a6" stroke-width="2" fill="none" marker-end="url(#arrow)"><path d="M270 190 H370"/><path d="M600 170 H650 V145 H700"/><path d="M600 220 H650 V275 H700"/><path d="M485 260 V350"/></g>
+</svg>

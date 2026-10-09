@@ -25,5 +25,7 @@ jobs:
       - run: DRY_RUN=1 MP_AWS_MARKETPLACE_PRODUCT_ID=synthetic-product MP_AWS_ECR=example.invalid RELEASE_VERSION=0.1.0 bash devops/changeset.sh > /tmp/changeset.json
       - run: docker network create application-platforms-local
       - run: docker compose build
+      - run: docker compose run --rm --no-deps autovision-vision python -m unittest discover -s src/vision -v
+      - run: docker compose run --rm --no-deps autovision-vision python src/vision/evaluate.py
 
 

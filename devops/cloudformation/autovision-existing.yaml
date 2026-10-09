@@ -144,6 +144,30 @@
         "false"
       ],
       "Description": "Use EventBridge to deliver incidents. Set false for direct SQS delivery."
+    },
+    "VisionAIEnabled": {
+      "Type": "String",
+      "Default": "true",
+      "AllowedValues": [
+        "true",
+        "false"
+      ],
+      "Description": "Enable Nova Lite scene grounding; incurs bounded per-request Bedrock charges. US inference profile; deploy in us-east-1."
+    },
+    "PublicDemoEnabled": {
+      "Type": "String",
+      "Default": "true",
+      "AllowedValues": [
+        "true",
+        "false"
+      ],
+      "Description": "Enable anonymous bounded image/video sample analysis"
+    },
+    "PublicDemoDailyLimit": {
+      "Type": "Number",
+      "Default": 100,
+      "MinValue": 1,
+      "MaxValue": 10000
     }
   },
   "Resources": {
@@ -587,6 +611,32 @@
                 "Value": {
                   "Ref": "MarketplaceUrl"
                 }
+              },
+              {
+                "Name": "AUTOVISION_VISION_MODEL_ID",
+                "Value": {
+                  "Fn::If": [
+                    "UseVisionAI",
+                    "us.amazon.nova-lite-v1:0",
+                    ""
+                  ]
+                }
+              },
+              {
+                "Name": "AUTOVISION_AI_DETECTIONS",
+                "Value": "package"
+              },
+              {
+                "Name": "AUTOVISION_PUBLIC_DEMO_ENABLED",
+                "Value": {
+                  "Ref": "PublicDemoEnabled"
+                }
+              },
+              {
+                "Name": "AUTOVISION_PUBLIC_DEMO_DAILY_LIMIT",
+                "Value": {
+                  "Ref": "PublicDemoDailyLimit"
+                }
               }
             ],
             "LogConfiguration": {
@@ -797,6 +847,32 @@
               {
                 "Name": "AUTOVISION_NOTIFICATION_MODE",
                 "Value": "aws"
+              },
+              {
+                "Name": "AUTOVISION_VISION_MODEL_ID",
+                "Value": {
+                  "Fn::If": [
+                    "UseVisionAI",
+                    "us.amazon.nova-lite-v1:0",
+                    ""
+                  ]
+                }
+              },
+              {
+                "Name": "AUTOVISION_AI_DETECTIONS",
+                "Value": "package"
+              },
+              {
+                "Name": "AUTOVISION_PUBLIC_DEMO_ENABLED",
+                "Value": {
+                  "Ref": "PublicDemoEnabled"
+                }
+              },
+              {
+                "Name": "AUTOVISION_PUBLIC_DEMO_DAILY_LIMIT",
+                "Value": {
+                  "Ref": "PublicDemoDailyLimit"
+                }
               }
             ],
             "LogConfiguration": {
@@ -1147,7 +1223,9 @@
             "Field": "path-pattern",
             "PathPatternConfig": {
               "Values": [
-                "/api/*"
+                "/api/*",
+                "/mcp",
+                "/mcp/*"
               ]
             }
           }
@@ -1290,6 +1368,52 @@
           "EvaluateTargetHealth": false
         }
       }
+    },
+    "VisionBedrockAccess": {
+      "Type": "AWS::IAM::Policy",
+      "Condition": "UseVisionAI",
+      "Properties": {
+        "PolicyName": "NovaLiteImageGrounding",
+        "Roles": [
+          {
+            "Ref": "TaskRole"
+          }
+        ],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": "bedrock:InvokeModel",
+              "Resource": {
+                "Fn::Sub": "arn:${AWS::Partition}:bedrock:us-east-1:${AWS::AccountId}:inference-profile/us.amazon.nova-lite-v1:0"
+              }
+            },
+            {
+              "Effect": "Allow",
+              "Action": "bedrock:InvokeModel",
+              "Resource": [
+                {
+                  "Fn::Sub": "arn:${AWS::Partition}:bedrock:us-east-1::foundation-model/amazon.nova-lite-v1:0"
+                },
+                {
+                  "Fn::Sub": "arn:${AWS::Partition}:bedrock:us-east-2::foundation-model/amazon.nova-lite-v1:0"
+                },
+                {
+                  "Fn::Sub": "arn:${AWS::Partition}:bedrock:us-west-2::foundation-model/amazon.nova-lite-v1:0"
+                }
+              ],
+              "Condition": {
+                "StringEquals": {
+                  "bedrock:InferenceProfileArn": {
+                    "Fn::Sub": "arn:${AWS::Partition}:bedrock:us-east-1:${AWS::AccountId}:inference-profile/us.amazon.nova-lite-v1:0"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
     }
   },
   "Outputs": {
@@ -1361,6 +1485,14 @@
       "Fn::Equals": [
         {
           "Ref": "EventBridgeEnabled"
+        },
+        "true"
+      ]
+    },
+    "UseVisionAI": {
+      "Fn::Equals": [
+        {
+          "Ref": "VisionAIEnabled"
         },
         "true"
       ]

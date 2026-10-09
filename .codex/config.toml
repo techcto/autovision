@@ -1,0 +1,14 @@
+# Local AutoVision only. Keep the API key in the launching process environment.
+# These tools consume quota and may call Bedrock; other approvals are unchanged.
+[mcp_servers.autovision_local]
+url = "http://localhost:8081/mcp"
+bearer_token_env_var = "AUTOVISION_API_KEY"
+enabled_tools = ["analyze_image", "analyze_video_frames"]
+default_tools_approval_mode = "prompt"
+tool_timeout_sec = 90
+
+[mcp_servers.autovision_local.tools.analyze_image]
+approval_mode = "approve"
+
+[mcp_servers.autovision_local.tools.analyze_video_frames]
+approval_mode = "approve"

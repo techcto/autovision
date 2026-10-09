@@ -1,0 +1,18 @@
+{
+  "services": {
+    "autovision-web": {
+      "environment": {
+        "AUTOVISION_BEDROCK_CREDENTIALS_FILE": "/run/secrets/autovision-bedrock.json",
+        "AUTOVISION_VISION_MODEL_ID": "us.amazon.nova-lite-v1:0"
+      },
+      "volumes": [{"type":"bind", "source":"${AUTOVISION_BEDROCK_CREDENTIALS_PATH:?Set the absolute path to your dedicated Bedrock credential JSON file}", "target":"/run/secrets/autovision-bedrock.json", "read_only":true}]
+    },
+    "autovision-api": {
+      "environment": {
+        "AUTOVISION_BEDROCK_CREDENTIALS_FILE": "/run/secrets/autovision-bedrock.json",
+        "AUTOVISION_VISION_MODEL_ID": "us.amazon.nova-lite-v1:0"
+      },
+      "volumes": [{"type":"bind", "source":"${AUTOVISION_BEDROCK_CREDENTIALS_PATH:?Set the absolute path to your dedicated Bedrock credential JSON file}", "target":"/run/secrets/autovision-bedrock.json", "read_only":true}]
+    }
+  }
+}

@@ -1,0 +1,2 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import {newJob,saveJob,listJobs} from '../src/lib/jobs';
+test('history is tenant scoped, attributed and expiring',async()=>{const job=newJob('synthetic-history-a',{kind:'api_key',id:'opaque-key-id',label:'Demo integration'},'rest',2);await saveJob(job);assert.equal((await listJobs('synthetic-history-a'))[0].actor.label,'Demo integration');assert.equal((await listJobs('synthetic-history-b')).length,0);await saveJob({...job,ttl:0});assert.equal((await listJobs('synthetic-history-a')).length,0);});

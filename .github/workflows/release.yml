@@ -18,7 +18,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: {node-version: 26, cache: npm}
-      - run: npm ci && npm run typecheck && npm run test:web && npm run build
+      - run: npm ci && npm run typecheck && npm run lint && npm run test:web && npm run build
+      - run: docker compose build autovision-vision
+      - run: docker compose run --rm --no-deps autovision-vision python -m unittest discover -s src/vision -v
       - uses: actions/setup-python@v5
         with: {python-version: '3.13'}
       - run: pip install cfn-lint && cfn-lint devops/cloudformation/*.yaml
@@ -45,7 +47,7 @@ jobs:
           echo "MP_AWS_ECR=$REGISTRY" >> "$GITHUB_ENV"
           for service in web api worker vision; do
             repository="$REPOSITORY_PREFIX-$service"
-            aws ecr describe-repositories --repository-names "$repository" >/dev/null 2>&1 || aws ecr create-repository --repository-name "$repository" --image-scanning-configuration scanOnPush=true >/dev/null
+            aws ecr describe-repositories --repository-names "$repository" >/dev/null || { echo "Provision $repository through a reviewed CloudFormation change set before publishing." >&2; exit 1; }
             docker buildx build --platform linux/amd64 --provenance=false --sbom=false --push -f "devops/docker/Dockerfile.$service" -t "$REGISTRY/$REPOSITORY_PREFIX-$service:$version" .
           done
       - name: Publish deployment templates

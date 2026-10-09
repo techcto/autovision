@@ -12,7 +12,8 @@
     "start": "next start",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
-    "test:web": "tsx --test tests/platform.test.ts",
+    "test:web": "tsx --test tests/*.test.ts",
+    "test:mcp:local": "node devops/testing/mcp-local.mjs",
     "worker": "tsx src/worker/index.ts"
   },
   "dependencies": {
@@ -24,13 +25,16 @@
     "@aws-sdk/client-socialmessaging": "^3.1136.0",
     "@aws-sdk/client-sqs": "^3.1136.0",
     "@aws-sdk/lib-dynamodb": "^3.1136.0",
+    "@modelcontextprotocol/sdk": "1.32.1",
     "bootstrap": "^5.3.3",
     "next": "^16.3.8",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
-    "stripe": "^22.6.2"
+    "stripe": "^22.6.2",
+    "zod": "4.6.5"
   },
   "devDependencies": {
+    "@playwright/test": "1.64.0",
     "@types/node": "^26.6.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
@@ -41,6 +45,7 @@
   },
   "overrides": {
     "postcss": "8.5.28",
-    "sharp": "0.35.4"
+    "sharp": "0.35.5",
+    "source-map-js": "1.2.2"
   }
 }

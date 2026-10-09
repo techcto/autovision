@@ -1,0 +1,14 @@
+flowchart LR
+  Browser[Browser: image or video] -->|Sample at most 12 frames, no original video upload| API
+  REST[REST client] -->|Organization API key| API
+  MCP[MCP client] -->|Same API key, Streamable HTTP| API
+  ALB[ALB: HTTPS, API and MCP routing] --> API[Next.js API on ECS Fargate]
+  API --> CV[OpenCV 5: decode, resize, grayscale, difference, threshold, thumbnail]
+  CV --> HOG[Isolated OpenCV 4 HOG pedestrian adapter]
+  API -->|Optional first, middle, last sampled frames| Nova[Amazon Bedrock Nova Lite]
+  Nova -->|Advisory summary and package boxes| API
+  API --> DDB[DynamoDB: tenant job history, thumbnail, usage, public daily budget]
+  API --> Result[Structured result, timestamps, measured motion and labeled boxes]
+  Result --> Browser
+  Result --> REST
+  Result --> MCP
