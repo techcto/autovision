@@ -6,6 +6,11 @@ RUN pip install --no-cache-dir -r requirements.txt && useradd --uid 10001 --crea
 RUN python -m venv /opt/pedestrian && /opt/pedestrian/bin/pip install --no-cache-dir opencv-python-headless==4.13.0.92 numpy==2.5.3
 ENV AUTOVISION_PEDESTRIAN_PYTHON=/opt/pedestrian/bin/python
 COPY src/vision ./src/vision
+RUN python src/vision/install_face_models.py /opt/face-models
+ENV AUTOVISION_YUNET_MODEL=/opt/face-models/yunet.onnx \
+    AUTOVISION_YUNET_SHA256=ebafce4e3c118d6554634be5c27ab333b4c047a9a8c3faf1d7cf93101c22f0f0 \
+    AUTOVISION_SFACE_MODEL=/opt/face-models/sface.onnx \
+    AUTOVISION_SFACE_SHA256=0ba9fbfa01b5270c96627c4ef784da859931e02f04419c829e83484087c34e79
 USER app
 EXPOSE 8000
 CMD ["python", "src/vision/server.py"]

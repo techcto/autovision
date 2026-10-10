@@ -200,3 +200,56 @@ AWS deployments must pass these settings and scoped Bedrock permissions through 
 
 Nova supports bounding-box image grounding: [AWS documentation](https://docs.aws.amazon.com/nova/latest/userguide/modalities-image.html).
 
+## Feature map and integration boundaries
+
+| Area | What AutoVision does |
+| --- | --- |
+| Public website and console | Public demo, SaaS signup, organization selection, API keys, usage/plans, settings, and private job history. Private installations disable public signup. |
+| Image and sampled-video analysis | REST and MCP share bounded analysis; step through saved previews with normalized object boxes and sample timestamps. Original MP4s are not retained. |
+| Object selection | Organization defaults and per-request `detection_labels` select from the catalog. Catalog entries do not imply a trained OpenCV detector for every category: the current measured detector is HOG person detection, with optional Bedrock grounding for selected additional labels. |
+| Privacy | Purge saved analysis history and previews without deleting organizations or API credentials. Consumers such as SmartDetector have their own retention controls. |
+| Optional face measurements | Separate authenticated, quota-metered `POST /api/v1/faces` returns face boxes and embeddings, without creating saved jobs or maintaining a face gallery. Requires operator-supplied models. |
+| Deployment | Same web/API/worker/vision images support SaaS and private installations. CloudFormation controls AWS updates. COOL is optional configuration, not a demonstrated acceleration claim. |
+
+## Faces: YuNet, SFace, and SmartDetector
+
+YuNet and SFace are **model files**, not individual containers. OpenCV loads both inside the existing vision container. The whole-person detector answers “where is a person?”; the face path supplies measurements a consuming application can use for opt-in matching.
+
+```text
+Image → YuNet face box/landmarks → SFace aligned-face embedding
+      → SmartDetector's encrypted location-specific household gallery
+      → uncertain/known match → activity and notification preferences
+```
+
+- **YuNet:** locates faces and landmarks. Use a compatible dynamic-input export for this OpenCV 5 variable-resolution path; see the [official model documentation](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet).
+- **SFace:** converts an aligned face into a normalized 128-number signature. It does not know names. See the [official model documentation](https://github.com/opencv/opencv_zoo/tree/main/models/face_recognition_sface).
+- **AutoVision:** computes and returns measurements. `/api/v1/faces` bypasses `runJob`, never stores its inputs/embeddings as analysis jobs, does not invoke Bedrock, and sends `Cache-Control: no-store`. Ordinary `/analyze` jobs still follow their normal retention policy.
+- **SmartDetector:** owns names, consent, encrypted enrolled references, location isolation, matching, timelines and alert preferences. No gallery or customer identity database belongs in AutoVision.
+
+The face response uses `{model_id, frames:[{at_ms, faces:[{box:{x,y,width,height}, embedding:[...128 numbers]}]}]}`. The model ID includes both weight checksums; embeddings from different IDs must not be compared. Boxes are normalized. Small/clipped faces are omitted. Scores are not identity probabilities, and the endpoint is not proof of identity or liveness.
+
+### Configure and test face models
+
+The standard vision image now downloads checksum-pinned official OpenCV Zoo weights **at build time**, including their MIT (YuNet) and Apache-2.0 (SFace) license notices. No separate face container or runtime download is needed. The manifest is in `src/vision/install_face_models.py`, pinned to Zoo revision `47534e27c9851bb1128ccc0102f1145e27f23f98`. Rebuild the vision image to include these models; existing production images are unchanged until released and deployed.
+
+The Dockerfile configures the bundled models automatically. For custom read-only ONNX files, override:
+
+```text
+AUTOVISION_YUNET_MODEL=/models/yunet.onnx
+AUTOVISION_YUNET_SHA256=<sha256 of the exact YuNet file>
+AUTOVISION_SFACE_MODEL=/models/sface.onnx
+AUTOVISION_SFACE_SHA256=<sha256 of the exact SFace file>
+```
+
+For ordinary local development, rebuild with `docker compose up --build` using your existing port/network overrides. For custom weights only, set `AUTOVISION_FACE_MODELS_DIR` to an existing directory containing `yunet.onnx` and `sface.onnx`, plus both SHA-256 variables, then add `-f docker-compose.faces.yml` to your compose file list. This override mounts files read-only and refuses to silently create a missing model directory. Do not commit personal footage, enrolled signatures or credentials. AWS image updates use a reviewed CloudFormation change set. Missing files, checksum mismatch, or unsupported runtime return unavailable rather than fabricated face results.
+
+Call `POST /api/v1/faces` with an AutoVision bearer API key and the same `image` or ordered `frames` input as analysis, with `classify:false`. Limits are 1–12 frames, 30 seconds, JPEG/PNG, bounded request size; images consume the normal tenant quota. Treat returned embeddings as sensitive biometric data and do not log them in clients/proxies. The service cannot control retention by downstream clients or external infrastructure.
+
+Verification includes authenticated-route/no-job tests, Python tests with synthetic model doubles, and real YuNet/SFace inference on an OpenCV sample: OpenCV 5.0.0 detected one face and returned a 128-dimensional embedding. This smoke check is not household accuracy or liveness validation; calibration and production deployment remain separate checks. Run `npm run test:web`, `npm run lint`, and the vision container's `python -m unittest discover -s src/vision -p 'test_*.py'` before release.
+
+## OpenCV developer feedback
+
+Future consumers could use the stateless measurements for building-access or attendance workflows while owning their own enrollment, consent and business rules. Those are not current AutoVision features. Access/attendance decisions would need representative validation, anti-spoof/liveness controls, audit/correction and an alternative such as a badge or PIN; a similarity score alone is insufficient.
+
+The [friction log](FRICTION_LOG.md) records observed tasks, steps, expected/actual behavior, severity, workarounds and actionable suggestions. Include the sanitized log URL in the submission; recording it here does not submit it to Devpost automatically.
+

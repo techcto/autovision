@@ -9,6 +9,7 @@ from pathlib import Path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import cv2
 import numpy as np
+from faces import measure_faces, FaceModelsUnavailable
 
 _slots = threading.BoundedSemaphore(2)
 
@@ -102,6 +103,7 @@ class Handler(BaseHTTPRequestHandler):
         data = json.dumps(value).encode()
         self.send_response(code)
         self.send_header('Content-Type', 'application/json')
+        self.send_header('Cache-Control', 'no-store')
         self.send_header('Content-Length', str(len(data)))
         self.end_headers()
         self.wfile.write(data)
@@ -110,7 +112,7 @@ class Handler(BaseHTTPRequestHandler):
         self.respond(200 if self.path == '/api/health' else 404, {'status': 'ok', 'engine_version': cv2.__version__})
 
     def do_POST(self):
-        if self.path not in ('/detect', '/analyze'):
+        if self.path not in ('/detect', '/analyze', '/faces'):
             return self.respond(404, {'error': 'not found'})
         size = int(self.headers.get('Content-Length', '0'))
         if not 0 < size <= 4000000:
@@ -118,8 +120,11 @@ class Handler(BaseHTTPRequestHandler):
         if not _slots.acquire(blocking=False):
             return self.respond(429, {'error': 'Vision service busy'})
         try:
-            result = (analyze if self.path == '/analyze' else detect)(json.loads(self.rfile.read(size)))
+            value = json.loads(self.rfile.read(size))
+            result = measure_faces(value, decode_image) if self.path == '/faces' else (analyze if self.path == '/analyze' else detect)(value)
             self.respond(200, result)
+        except FaceModelsUnavailable:
+            self.respond(503, {'error': 'Face measurement models unavailable'})
         except (ValueError, TypeError, KeyError, cv2.error, subprocess.SubprocessError, RuntimeError):
             self.respond(400, {'error': 'Invalid images or detection options'})
         finally:

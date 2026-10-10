@@ -1,0 +1,14 @@
+services:
+  autovision-vision:
+    volumes:
+      - type: bind
+        source: ${AUTOVISION_FACE_MODELS_DIR:?Set AUTOVISION_FACE_MODELS_DIR to a directory of reviewed ONNX files}
+        target: /models
+        read_only: true
+        bind:
+          create_host_path: false
+    environment:
+      AUTOVISION_YUNET_MODEL: /models/yunet.onnx
+      AUTOVISION_YUNET_SHA256: ${AUTOVISION_YUNET_SHA256:?Set the exact YuNet SHA-256}
+      AUTOVISION_SFACE_MODEL: /models/sface.onnx
+      AUTOVISION_SFACE_SHA256: ${AUTOVISION_SFACE_SHA256:?Set the exact SFace SHA-256}
