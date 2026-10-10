@@ -1,11 +1,13 @@
-export const detectionCatalog = {
+import {objectLabels, ObjectLabel, detectionPresets} from './detection-catalog';
+export const detectionCatalog: Record<ObjectLabel,string> = {
+  ...Object.fromEntries(objectLabels.map(label=>[label,'A clearly visible '+label+'. Do not infer an object that is obscured or absent.'])) as Record<ObjectLabel,string>,
   package: 'A visible delivery parcel or cardboard shipping box, not a person or clothing.',
   smoke: 'Visible airborne smoke; do not confuse fog, steam, clouds or shadows with smoke.',
   fire: 'Visible flames; do not infer fire from warm colors or lighting alone.',
 } as const;
 export type AiLabel=keyof typeof detectionCatalog;
 export type AiDetection={label:AiLabel;source:'bedrock';advisory:true;box:{x:number;y:number;width:number;height:number}};
-export function enabledAiLabels(value=process.env.AUTOVISION_AI_DETECTIONS??'package'):AiLabel[]{
+export function enabledAiLabels(value=process.env.AUTOVISION_AI_DETECTIONS??detectionPresets.smartdetector.join(',')):AiLabel[]{
  return [...new Set(value.split(',').map(s=>s.trim()).filter((s):s is AiLabel=>Object.hasOwn(detectionCatalog,s)))];
 }
 export function parseGrounding(text:string,allowed:AiLabel[],indices:number[]){

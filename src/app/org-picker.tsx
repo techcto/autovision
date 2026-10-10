@@ -11,8 +11,9 @@ export default function OrgPicker({activeOrgId,activeOrgName,isRoot}:{activeOrgI
   const ref=useRef<HTMLDivElement>(null);
   useEffect(()=>{
     function onClick(e:MouseEvent){if(ref.current&&!ref.current.contains(e.target as globalThis.Node))setOpen(false)}
-    document.addEventListener('mousedown',onClick);
-    return ()=>document.removeEventListener('mousedown',onClick);
+    function onKey(e:KeyboardEvent){if(e.key==='Escape')setOpen(false)}
+    document.addEventListener('mousedown',onClick);document.addEventListener('keydown',onKey);
+    return ()=>{document.removeEventListener('mousedown',onClick);document.removeEventListener('keydown',onKey)};
   },[]);
   function load(){fetch('/api/orgs').then(r=>r.ok?r.json():[]).then(setOrgs)}
   async function switchTo(orgId:string){
@@ -20,7 +21,7 @@ export default function OrgPicker({activeOrgId,activeOrgName,isRoot}:{activeOrgI
     setBusy(true);
     const r=await fetch('/api/orgs/active',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({orgId})});
     setBusy(false);
-    if(r.ok)window.location.assign('/');
+    if(r.ok)window.location.assign('/dashboard');
   }
   return <div className="org-picker position-relative" ref={ref}>
     <button className="org-picker-button" type="button" onClick={()=>{setOpen(o=>!o);if(!orgs)load()}} aria-haspopup="menu" aria-expanded={open}>
@@ -32,7 +33,7 @@ export default function OrgPicker({activeOrgId,activeOrgName,isRoot}:{activeOrgI
       {orgs?.map(o=><button key={o.id} type="button" className={`org-picker-item${o.id===activeOrgId?' active':''}`} role="menuitem" disabled={busy} onClick={()=>switchTo(o.id)}>
         <span>{o.name}</span><span className="muted small">{o.orgType}</span>
       </button>)}
-      {isRoot&&<Link className="org-picker-item" href="/settings?tab=Organizations" role="menuitem" onClick={()=>setOpen(false)}>+ Add organization</Link>}
+      {isRoot&&<Link className="org-picker-item" href="/organizations" role="menuitem" onClick={()=>setOpen(false)}>+ Add organization</Link>}
     </div>}
   </div>;
 }

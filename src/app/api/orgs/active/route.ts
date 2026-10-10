@@ -1,5 +1,6 @@
 import{NextRequest,NextResponse}from'next/server';import{createSession,isSecureRequest,sessionCookie}from'@/lib/session';import{operator}from'@/lib/operator';import{store}from'@/lib/store';
 export async function POST(req:NextRequest){
+  if(process.env.AUTOVISION_DEPLOYMENT_MODE!=='saas')return NextResponse.json({error:'Organizations are disabled in private mode'},{status:403});
   const session=await operator(req);
   if(!session)return NextResponse.json({error:'unauthorized'},{status:401});
   const {orgId}=await req.json() as {orgId?:string};

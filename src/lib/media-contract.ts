@@ -1,6 +1,7 @@
+import {ObjectLabel,validateObjectLabels} from './detection-catalog';
 export const MAX_BODY = 4_000_000;
 export type Frame = {image: string; at_ms: number};
-export type AnalysisInput = {frames: Frame[]; classify?: boolean};
+export type AnalysisInput = {frames: Frame[]; classify?: boolean; detection_labels?: ObjectLabel[]};
 export class MediaError extends Error {
   constructor(message: string, public status = 400) {super(message);}
 }
@@ -19,7 +20,11 @@ export function validateAnalysis(value: unknown): AnalysisInput {
     size += frame.image.length; last = frame.at_ms;
   }
   if (size > 3_800_000) throw new MediaError('Frame batch exceeds 3.8 MB', 413);
-  return {frames, classify: v.classify === true};
+  let labels: ObjectLabel[] | undefined;
+  if (v.detection_labels !== undefined) {
+    try {labels=validateObjectLabels(v.detection_labels);} catch {throw new MediaError('Invalid detection_labels; choose labels from the catalog');}
+  }
+  return {frames, classify: v.classify === true, ...(labels===undefined?{}:{detection_labels:labels})};
 }
 export async function readBoundedJson(request: Request) {
   if (!request.headers.get('content-type')?.startsWith('application/json')) throw new MediaError('Use application/json', 415);

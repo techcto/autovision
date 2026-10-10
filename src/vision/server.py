@@ -57,7 +57,14 @@ def analyze(v):
         observations = [{'type': 'person', 'value': len(boxes), 'detected': bool(boxes)}]
         if motion is not None:
             observations.append({'type': 'motion', 'value': motion, 'detected': motion > 0.01})
-        results.append({'at_ms': at, 'observations': observations, 'detections': boxes})
+        # Bounded, aspect-preserving evidence; <=12 small JPEGs keeps each job
+        # below DynamoDB's item limit without retaining the source video.
+        h, w = current.shape[:2]
+        scale = min(1, 320 / max(h, w))
+        preview = base64.b64encode(cv2.imencode('.jpg', cv2.resize(current, (max(1, round(w*scale)), max(1, round(h*scale)))), [cv2.IMWRITE_JPEG_QUALITY, 45])[1]).decode()
+        if len(preview) > 24000:
+            preview = base64.b64encode(cv2.imencode('.jpg', cv2.resize(current, (max(1, round(w*scale/2)), max(1, round(h*scale/2)))), [cv2.IMWRITE_JPEG_QUALITY, 35])[1]).decode()
+        results.append({'at_ms': at, 'observations': observations, 'detections': boxes, 'preview': preview})
         previous, last_at = gray, at
     thumbnail = base64.b64encode(cv2.imencode('.jpg', cv2.resize(decode_image(frames[0]['image']), (160, 90)), [cv2.IMWRITE_JPEG_QUALITY, 50])[1]).decode()
     return {'thumbnail': thumbnail, 'frames': results, 'observations': [{'type': 'person', 'value': max(f['observations'][0]['value'] for f in results), 'detected': any(f['detections'] for f in results)}, {'type': 'motion', 'value': max((o['value'] for f in results for o in f['observations'] if o['type'] == 'motion'), default=0), 'detected': any(o['detected'] for f in results for o in f['observations'] if o['type'] == 'motion')}], 'engine': 'opencv5-motion+legacy-hog', 'engine_version': cv2.__version__, 'detector_version': 'opencv4-hog-4.13.0', 'metrics': {'latency_ms': round((time.perf_counter() - start) * 1000, 3)}, 'limitations': ['Pedestrian detector, not a general object or fire classifier.', 'Detector scores are not calibrated probabilities.', 'Sampled frames may miss events between samples.']}

@@ -37,6 +37,14 @@ class AnalysisTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 analyze({'frames': frames})
 
+    def test_sampled_previews_are_bounded_and_preserve_aspect(self):
+        image = np.random.default_rng(1).integers(0, 256, (360, 640, 3), dtype=np.uint8)
+        result = analyze({'frames': [frame(image, 0)]})
+        preview = result['frames'][0]['preview']
+        self.assertLessEqual(len(preview), 24000)
+        decoded = cv2.imdecode(np.frombuffer(base64.b64decode(preview), np.uint8), cv2.IMREAD_COLOR)
+        self.assertEqual(decoded.shape[:2], (180, 320))
+
 
 if __name__ == '__main__':
     unittest.main()

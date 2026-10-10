@@ -168,6 +168,21 @@
       "Default": 100,
       "MinValue": 1,
       "MaxValue": 10000
+    },
+    "VisionBackend": {
+      "Type": "String",
+      "Default": "standard",
+      "AllowedValues": [
+        "standard",
+        "cool"
+      ],
+      "Description": "standard uses the bundled OpenCV vision sidecar; cool uses a separately provisioned, licensed COOL/Graviton service. No automatic Marketplace subscription."
+    },
+    "CoolVisionUrl": {
+      "Type": "String",
+      "Default": "",
+      "AllowedPattern": "^$|^https?://[A-Za-z0-9.-]+(:[0-9]{1,5})?$",
+      "Description": "Private base URL of a verified COOL service implementing /analyze and /detect. Restrict network access to app task security groups. Required only for cool."
     }
   },
   "Resources": {
@@ -637,6 +652,24 @@
                 "Value": {
                   "Ref": "PublicDemoDailyLimit"
                 }
+              },
+              {
+                "Name": "AUTOVISION_VISION_URL",
+                "Value": {
+                  "Fn::If": [
+                    "UseCool",
+                    {
+                      "Ref": "CoolVisionUrl"
+                    },
+                    "http://localhost:8000"
+                  ]
+                }
+              },
+              {
+                "Name": "AUTOVISION_VISION_BACKEND",
+                "Value": {
+                  "Ref": "VisionBackend"
+                }
               }
             ],
             "LogConfiguration": {
@@ -836,7 +869,15 @@
               },
               {
                 "Name": "AUTOVISION_VISION_URL",
-                "Value": "http://localhost:8000"
+                "Value": {
+                  "Fn::If": [
+                    "UseCool",
+                    {
+                      "Ref": "CoolVisionUrl"
+                    },
+                    "http://localhost:8000"
+                  ]
+                }
               },
               {
                 "Name": "BEDROCK_MODEL_ID",
@@ -873,6 +914,12 @@
                 "Value": {
                   "Ref": "PublicDemoDailyLimit"
                 }
+              },
+              {
+                "Name": "AUTOVISION_VISION_BACKEND",
+                "Value": {
+                  "Ref": "VisionBackend"
+                }
               }
             ],
             "LogConfiguration": {
@@ -889,28 +936,36 @@
             }
           },
           {
-            "Name": "vision",
-            "Image": {
-              "Fn::Sub": "${ImageBase}-vision:${ReleaseVersion}"
-            },
-            "Essential": true,
-            "PortMappings": [
+            "Fn::If": [
+              "UseCool",
               {
-                "ContainerPort": 8000
-              }
-            ],
-            "LogConfiguration": {
-              "LogDriver": "awslogs",
-              "Options": {
-                "awslogs-group": {
-                  "Ref": "LogGroup"
+                "Ref": "AWS::NoValue"
+              },
+              {
+                "Name": "vision",
+                "Image": {
+                  "Fn::Sub": "${ImageBase}-vision:${ReleaseVersion}"
                 },
-                "awslogs-region": {
-                  "Ref": "AWS::Region"
-                },
-                "awslogs-stream-prefix": "vision"
+                "Essential": true,
+                "PortMappings": [
+                  {
+                    "ContainerPort": 8000
+                  }
+                ],
+                "LogConfiguration": {
+                  "LogDriver": "awslogs",
+                  "Options": {
+                    "awslogs-group": {
+                      "Ref": "LogGroup"
+                    },
+                    "awslogs-region": {
+                      "Ref": "AWS::Region"
+                    },
+                    "awslogs-stream-prefix": "vision"
+                  }
+                }
               }
-            }
+            ]
           }
         ]
       }
@@ -1087,7 +1142,15 @@
               },
               {
                 "Name": "AUTOVISION_VISION_URL",
-                "Value": "http://localhost:8000"
+                "Value": {
+                  "Fn::If": [
+                    "UseCool",
+                    {
+                      "Ref": "CoolVisionUrl"
+                    },
+                    "http://localhost:8000"
+                  ]
+                }
               },
               {
                 "Name": "BEDROCK_MODEL_ID",
@@ -1098,6 +1161,12 @@
               {
                 "Name": "AUTOVISION_NOTIFICATION_MODE",
                 "Value": "aws"
+              },
+              {
+                "Name": "AUTOVISION_VISION_BACKEND",
+                "Value": {
+                  "Ref": "VisionBackend"
+                }
               }
             ],
             "LogConfiguration": {
@@ -1114,28 +1183,36 @@
             }
           },
           {
-            "Name": "vision",
-            "Image": {
-              "Fn::Sub": "${ImageBase}-vision:${ReleaseVersion}"
-            },
-            "Essential": true,
-            "PortMappings": [
+            "Fn::If": [
+              "UseCool",
               {
-                "ContainerPort": 8000
-              }
-            ],
-            "LogConfiguration": {
-              "LogDriver": "awslogs",
-              "Options": {
-                "awslogs-group": {
-                  "Ref": "LogGroup"
+                "Ref": "AWS::NoValue"
+              },
+              {
+                "Name": "vision",
+                "Image": {
+                  "Fn::Sub": "${ImageBase}-vision:${ReleaseVersion}"
                 },
-                "awslogs-region": {
-                  "Ref": "AWS::Region"
-                },
-                "awslogs-stream-prefix": "vision"
+                "Essential": true,
+                "PortMappings": [
+                  {
+                    "ContainerPort": 8000
+                  }
+                ],
+                "LogConfiguration": {
+                  "LogDriver": "awslogs",
+                  "Options": {
+                    "awslogs-group": {
+                      "Ref": "LogGroup"
+                    },
+                    "awslogs-region": {
+                      "Ref": "AWS::Region"
+                    },
+                    "awslogs-stream-prefix": "vision"
+                  }
+                }
               }
-            }
+            ]
           }
         ]
       }
@@ -1442,6 +1519,12 @@
       "Value": {
         "Ref": "EvidenceBucket"
       }
+    },
+    "VisionBackend": {
+      "Description": "Requested backend; COOL mode requires separately verified licensed Arm workload.",
+      "Value": {
+        "Ref": "VisionBackend"
+      }
     }
   },
   "Conditions": {
@@ -1496,6 +1579,14 @@
         },
         "true"
       ]
+    },
+    "UseCool": {
+      "Fn::Equals": [
+        {
+          "Ref": "VisionBackend"
+        },
+        "cool"
+      ]
     }
   },
   "Rules": {
@@ -1542,6 +1633,33 @@
             ]
           },
           "AssertDescription": "Supply LoadBalancerCanonicalHostedZoneId with HostedZoneId."
+        }
+      ]
+    },
+    "CoolRequiresEndpoint": {
+      "RuleCondition": {
+        "Fn::Equals": [
+          {
+            "Ref": "VisionBackend"
+          },
+          "cool"
+        ]
+      },
+      "Assertions": [
+        {
+          "Assert": {
+            "Fn::Not": [
+              {
+                "Fn::Equals": [
+                  {
+                    "Ref": "CoolVisionUrl"
+                  },
+                  ""
+                ]
+              }
+            ]
+          },
+          "AssertDescription": "Supply the licensed COOL/Graviton service private endpoint when VisionBackend=cool."
         }
       ]
     }

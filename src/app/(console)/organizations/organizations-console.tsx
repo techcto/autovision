@@ -20,11 +20,11 @@ export default function OrganizationsConsole(){
   }
   async function switchTo(orgId:string){
     const r=await fetch('/api/orgs/active',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({orgId})});
-    if(r.ok)window.location.assign('/');
+    if(r.ok)window.location.assign('/dashboard');
   }
   function closeDrawer(){setOpen(false);setCreated(null);setError('')}
   return <>
-    <div className="section-heading"><div><h2>Organizations</h2><p className="muted">Each organization has its own nodes, incidents, and enrollment token.</p></div><button className="button primary" onClick={()=>setOpen(true)}>Add organization</button></div>
+    <div className="section-heading"><div><h2>Organizations</h2><p className="muted">Each organization has its own API keys, analysis jobs, and usage quota.</p></div><button className="button primary" onClick={()=>setOpen(true)}>Add organization</button></div>
     <div className="table-wrap"><table><thead><tr><th>Name</th><th>Type</th></tr></thead><tbody>
       {orgs.length?orgs.map(o=><tr key={o.id} className="row-link" onClick={()=>switchTo(o.id)}><td><strong>{o.name}</strong></td><td className="muted">{o.orgType}</td></tr>)
       :<tr><td colSpan={2} className="empty-state"><strong>No organizations yet.</strong><span>Add one to get its enrollment token.</span></td></tr>}

@@ -1,5 +1,13 @@
 # AutoVision deployment
 
+## Optional COOL backend
+
+Both application templates accept `VisionBackend=standard|cool` (default: `standard`). Standard mode preserves the bundled OpenCV sidecars. COOL mode removes the API/worker standard sidecars and sends vision calls to `CoolVisionUrl`; web/API/worker ECS services remain otherwise unchanged. A template rule requires a URL when COOL is selected. Switching backend creates new task-definition revisions and rolls services; review the change set before executing.
+
+`CoolVisionUrl` must be a private service implementing the same `/analyze`, `/detect`, and health protocol on a separately provisioned, licensed COOL Marketplace Graviton host. This option does **not** subscribe, install COOL, create that host, or establish award eligibility. Do not point it to a standard OpenCV instance and call that COOL. Restrict host ingress to application task security groups; do not expose an unauthenticated vision endpoint publicly. The [official Marketplace offering](https://aws.amazon.com/marketplace/pp/prodview-fdvbfiewzuehs) is AMI-based; verify entitlement and supported installation before preparing its separate reviewed CloudFormation deployment.
+
+Keep standard mode until the COOL endpoint and Arm execution are verified. Capture the COOL version, instance type, actual workload trace, and identical-input standard-vs-COOL latency/throughput/cost measurements. A backend selection is configuration, not evidence of acceleration. Local Compose continues to use standard OpenCV.
+
 Use `autovision.yaml` to create an ALB and ECS cluster in an existing VPC. Use `autovision-existing.yaml` to attach the app to an existing cluster and listener. Private subnets need NAT or the appropriate AWS VPC endpoints for image pulls, logs, DynamoDB, and SQS.
 
 Select `DeploymentMode=saas` for hosted workspaces and Stripe billing or `on-premise` for a private installation. Set root credentials and a random session secret at launch. Supply an ACM certificate and configure DNS for HTTPS. The existing-listener template expects you to provide an HTTPS listener.

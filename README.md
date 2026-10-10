@@ -35,7 +35,7 @@ The core service uses **OpenCV 5.0.0** for image decoding, resizing, grayscale c
 
 ### Technical report and reproducible evaluation
 
-AutoVision serves developers adding visual observations to camera, workflow and agent applications. Browser sampling keeps original video/audio local and sends bounded image samples. Jobs retain one small thumbnail and structured observations, not the original clip. See the [architecture diagram](public/architecture.svg) and [editable source](devops/testing/architecture.mmd).
+AutoVision serves developers adding visual observations to camera, workflow and agent applications. Browser sampling keeps original video/audio local and sends bounded image samples. New jobs retain small sampled previews and structured observations for seven days, not the original clip. Settings includes organization-specific AI categories and a confirmed history purge; see [object detection and privacy](OBJECT_DETECTION.md). See the [architecture diagram](public/architecture.svg) and [editable source](devops/testing/architecture.mmd).
 
 The synthetic evaluation uses five repetitions per two-frame 320×180 sequence. On local x86-64 Docker on October 9, 2026, measured changed-pixel fractions exactly matched generated masks: 0%, 5%, 50% and 100%. Median vision latencies, including pedestrian subprocess overhead, were 483, 448, 471 and 479 ms. These are machine-specific measurements, not throughput guarantees or real-world detector accuracy.
 
