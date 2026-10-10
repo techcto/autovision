@@ -47,7 +47,11 @@ Submission packaging includes the submitted revision, setup, report with represe
 
 ## Try AutoVision
 
-For the latest development demo, start the local stack below and open [localhost:8081](http://localhost:8081). Upload an image or short video, or click an illustrated sample clip. Enable Bedrock for scene summaries and package boxes when configured. See the local [API reference](http://localhost:8081/api-reference) and [MCP guide](http://localhost:8081/docs/mcp).
+For the latest development demo, start the local stack below and open [localhost:8081](http://localhost:8081). Upload an image or short video for live analysis, or browse the supplied dog, doorbell visitor, package and backyard visitor clips with cached results. Illustrated animations and synthetic-run buttons have been removed from the public site and console; generated fixtures remain only in automated tests and technical benchmarks. Enable Bedrock for scene summaries and advisory boxes when configured. See the local [API reference](http://localhost:8081/api-reference) and [MCP guide](http://localhost:8081/docs/mcp).
+
+The homepage doorbell demo silently loops the supplied `public/intruder.mp4` without video-player controls. Click **View analysis** below it, then sample thumbnails or Previous/Next to inspect each image and its actual returned boxes. **Back to video** returns to the loop. Green boxes are OpenCV output; dashed red boxes are advisory Bedrock grounding. Video overlays appear only within 250 ms of a sampled timestamp, not as a continuous object tracker. The file name does not establish intent, identity, or danger. This recording is cached as a public asset: page visits and sample navigation do not call inference.
+
+To regenerate the public demo recording against a configured localhost stack, run `node devops/testing/record-home-demo.cjs` with Playwright/Chromium available. This uses the Live Lab browser sampler and analysis endpoint, requires successful AI grounding and real returned boxes, and writes `public/demo/intruder-analysis.json` plus a poster. The JSON records the source SHA-256, timestamps, engine versions and model. Run `node devops/testing/home-demo.cjs` to check playback, all samples/boxes, navigation, responsive layout, and absence of per-visit inference calls. Only use footage authorized for public distribution; this bundled demo is intentionally public, unlike private customer uploads.
 
 The hosted site is [autovision.dev](https://autovision.dev); its deployment may lag the local build. Sign in with an account supplied by the deployment owner. Hosted launch credentials are private and are **not** the local development defaults. In SaaS mode, signup creates a personal workspace; private installations disable public signup and billing.
 
@@ -175,7 +179,7 @@ Review each resource's deletion/retention policy before removing a stack. Export
 - Sensor thresholds are demonstration rules, not certified alarms or life-safety equipment.
 - Optional Bedrock failures do not prevent deterministic incident persistence.
 - AgentCore runtime integration is not implemented in this repository.
-- Demonstrations, fixtures, and screenshots must use synthetic data only.
+- Public demonstrations and screenshots must use explicitly authorized demo media, never private customer footage. Automated fixtures use generated test data.
 
 ## License
 

@@ -40,7 +40,3 @@ export async function sampleUpload(file: File, progress: (value: string)=>void):
     return frames;
   } finally {video.removeAttribute('src');video.load();URL.revokeObjectURL(url);}
 }
-export function syntheticFrames(): Frame[] {
-  const canvas=document.createElement('canvas');canvas.width=640;canvas.height=360;const c=canvas.getContext('2d')!;
-  return Array.from({length:8},(_,i)=>{c.fillStyle='#101c32';c.fillRect(0,0,640,360);c.strokeStyle='#253653';for(let x=0;x<640;x+=40){c.beginPath();c.moveTo(x,0);c.lineTo(x,360);c.stroke();}c.fillStyle='#73efc3';c.fillRect(40+i*65,120,70,100);return{image:canvas.toDataURL('image/jpeg',0.8).split(',')[1],at_ms:i*1000};});
-}
