@@ -33,5 +33,7 @@ export async function analyzeMedia(input: AnalysisInput) {
       } catch { /* Keep measured observations even if optional AI is unavailable. */ }
     }
   }
-  return {...result, classification, detection_policy:{labels:input.detection_labels??enabledAiLabels(),ai_requires_classify:true}, media: {kind:input.frames.length===1?'image':'sampled_video', frame_count: input.frames.length, duration_ms:input.frames.at(-1)!.at_ms}, privacy:{original_media_stored:false,sampled_previews_provided:true, sent_to_bedrock:input.classify===true && !!process.env.AUTOVISION_VISION_MODEL_ID}};
+  // Motion is measured against the previous frame, so the first entry has none.
+  const timeline=result.frames.map((f:{at_ms:number;observations:{type:string;value:number;detected:boolean}[]})=>{const m=f.observations.find(o=>o.type==='motion');return{at_ms:f.at_ms,motion:m?.value??null,detected:m?.detected??false}});
+  return {...result, timeline, classification, detection_policy:{labels:input.detection_labels??enabledAiLabels(),ai_requires_classify:true}, media: {kind:input.frames.length===1?'image':'sampled_video', frame_count: input.frames.length, duration_ms:input.frames.at(-1)!.at_ms}, privacy:{original_media_stored:false,sampled_previews_provided:true, sent_to_bedrock:input.classify===true && !!process.env.AUTOVISION_VISION_MODEL_ID}};
 }
