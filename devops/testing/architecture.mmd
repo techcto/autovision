@@ -4,7 +4,7 @@ flowchart LR
   MCP[MCP client] -->|Same API key, Streamable HTTP| API
   ALB[ALB: HTTPS, API and MCP routing] --> API[Next.js API on ECS Fargate]
   API --> CV[OpenCV 5: decode, resize, grayscale, difference, threshold, thumbnail]
-  CV --> HOG[Isolated OpenCV 4 HOG pedestrian adapter]
+  CV --> YOLOX[OpenCV 5 DNN: YOLOX COCO-80 detection, checksum-pinned OpenCV Zoo model]
   API -->|Optional first, middle, last sampled frames| Nova[Amazon Bedrock Nova Lite]
   Nova -->|Advisory summary and package boxes| API
   API --> DDB[DynamoDB: tenant job history, thumbnail, usage, public daily budget]

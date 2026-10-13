@@ -845,7 +845,7 @@
               },
               {
                 "Name": "AUTOVISION_AI_DETECTIONS",
-                "Value": "package"
+                "Value": "person,dog,cat,bird,car,bicycle,motorcycle,truck,package"
               },
               {
                 "Name": "AUTOVISION_PUBLIC_DEMO_ENABLED",
@@ -1107,7 +1107,7 @@
               },
               {
                 "Name": "AUTOVISION_AI_DETECTIONS",
-                "Value": "package"
+                "Value": "person,dog,cat,bird,car,bicycle,motorcycle,truck,package"
               },
               {
                 "Name": "AUTOVISION_PUBLIC_DEMO_ENABLED",

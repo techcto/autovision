@@ -11,7 +11,7 @@ def frame(image, at):
 
 class AnalysisTests(unittest.TestCase):
     def test_opencv5_runtime(self):
-        self.assertTrue(cv2.__version__.startswith("5."))
+        self.assertEqual(cv2.__version__, "5.0.0")
 
     def test_static_negative(self):
         image = np.zeros((128, 128, 3), np.uint8)

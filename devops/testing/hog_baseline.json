@@ -1,0 +1,544 @@
+{
+ "note": "Historical baseline of the retired OpenCV 4.13 HOG pedestrian detector; not the production implementation.",
+ "opencv_version": "4.13.0",
+ "recorded_at": "2026-10-13",
+ "videos": {
+  "4cfa551ffbc2dbfeddf30a88bbc3f18881bc64a5bf9f57db4642d20449aa0b08": {
+   "file": "backyardintruder.mp4",
+   "frames": [
+    {
+     "at_ms": 0,
+     "frame_sha256": "3cf8bb83fbbcd00114a344c6a9f54096fd5296bdd814b3c46c5522ebe0bc93f9",
+     "latency_ms": 9.7,
+     "detections": [
+      {
+       "label": "person",
+       "score": 2.394,
+       "box": {
+        "x": 0.3765625,
+        "y": 0.18333333333333332,
+        "width": 0.1703125,
+        "height": 0.6027777777777777
+       }
+      }
+     ]
+    },
+    {
+     "at_ms": 1000,
+     "frame_sha256": "0a94eed6c46d3e75ae5401cd0486096f343ca16a47cacdf567e3821b7f7fd2a3",
+     "latency_ms": 10.5,
+     "detections": [
+      {
+       "label": "person",
+       "score": 1.54,
+       "box": {
+        "x": 0.3640625,
+        "y": 0.15,
+        "width": 0.1953125,
+        "height": 0.6944444444444444
+       }
+      }
+     ]
+    },
+    {
+     "at_ms": 2000,
+     "frame_sha256": "64f6120a0ff375755e7d2d3b2afb95d2407f9e3fadc954d65d2f0e63da514928",
+     "latency_ms": 8.0,
+     "detections": [
+      {
+       "label": "person",
+       "score": 0.904,
+       "box": {
+        "x": 0.3703125,
+        "y": 0.17222222222222222,
+        "width": 0.2078125,
+        "height": 0.7361111111111112
+       }
+      }
+     ]
+    },
+    {
+     "at_ms": 3000,
+     "frame_sha256": "e43193795d94ac08e19a56d69f96069decc5b4b69936292ab9d6c6b61fb3ba2b",
+     "latency_ms": 6.9,
+     "detections": []
+    },
+    {
+     "at_ms": 4000,
+     "frame_sha256": "13892a229f77a516a385bee094b7978e7932c325a99d7e8929023386d3d136c1",
+     "latency_ms": 6.9,
+     "detections": []
+    },
+    {
+     "at_ms": 5000,
+     "frame_sha256": "2d87949c55b4e5dfbaa37c54b044a05776190c68679664bda130a9a7cf91807a",
+     "latency_ms": 6.6,
+     "detections": []
+    },
+    {
+     "at_ms": 6000,
+     "frame_sha256": "d65c3f4da5235b41e80180cd6ff20a2d96a85eab292c7644f064cf153d175246",
+     "latency_ms": 9.9,
+     "detections": []
+    },
+    {
+     "at_ms": 7000,
+     "frame_sha256": "e35ff1bfd6484950e6c10efff677c37d91a89a45736c6484595e77adba3c2e1a",
+     "latency_ms": 7.3,
+     "detections": []
+    },
+    {
+     "at_ms": 8000,
+     "frame_sha256": "c30ff1ae06bc5b90a5e3181efd50400674add88dc97b27a61e1ad84eaf5c1adc",
+     "latency_ms": 11.3,
+     "detections": []
+    },
+    {
+     "at_ms": 9000,
+     "frame_sha256": "c316df5035f4cfdbdd86dd798cd5fe2a90c759701f3d5b404ae3e90c02026f03",
+     "latency_ms": 10.4,
+     "detections": [
+      {
+       "label": "person",
+       "score": 0.612,
+       "box": {
+        "x": 0.38125,
+        "y": 0.275,
+        "width": 0.178125,
+        "height": 0.6305555555555555
+       }
+      }
+     ]
+    },
+    {
+     "at_ms": 9950,
+     "frame_sha256": "f7d7c4f53790d7dd46d31a0b780fa643c51d7ce7d4ca53852e2dc74d5afd3587",
+     "latency_ms": 6.4,
+     "detections": []
+    }
+   ]
+  },
+  "c1adc3e25b7e567d4fd8f7ffd26910c3f8cc7708b96c60734458bbd26b5f9b0c": {
+   "file": "dognight.mp4",
+   "frames": [
+    {
+     "at_ms": 0,
+     "frame_sha256": "2b5f351372adc302c988e9aed777364de25f0803eb7a1bc55e64bdc1b9023b04",
+     "latency_ms": 12.6,
+     "detections": []
+    },
+    {
+     "at_ms": 1000,
+     "frame_sha256": "2891cdae3af88bbcd25cc64c17c642ab9825a68be3e9f566999a54ad170126ac",
+     "latency_ms": 7.4,
+     "detections": []
+    },
+    {
+     "at_ms": 2000,
+     "frame_sha256": "19749344909de24718ac998b7d60c11223396f0b575ccc257fadb75d400a3925",
+     "latency_ms": 7.2,
+     "detections": []
+    },
+    {
+     "at_ms": 3000,
+     "frame_sha256": "a20ae46fcfd9fedec3cbf49c3d05c39b58a04f2f4953fec8cb2acdd6e26f4de3",
+     "latency_ms": 7.2,
+     "detections": []
+    },
+    {
+     "at_ms": 4000,
+     "frame_sha256": "2116fe1ba2b9ba4acec16fe86676abb78697c6b60393c7a81764f251491267f6",
+     "latency_ms": 7.1,
+     "detections": []
+    },
+    {
+     "at_ms": 5000,
+     "frame_sha256": "1e774712cdcbbb00d284e3ee23abf282444d6a8285134a5385c2aaab679e8e89",
+     "latency_ms": 7.1,
+     "detections": []
+    },
+    {
+     "at_ms": 6000,
+     "frame_sha256": "f6690308385446059040010848554eba86e4434efa112a75a375fb9c490d7036",
+     "latency_ms": 7.1,
+     "detections": []
+    },
+    {
+     "at_ms": 7000,
+     "frame_sha256": "d5054b5c29e78308e5160ce50342075699cc5c4540cd99555dcb25c2b96f88b7",
+     "latency_ms": 7.1,
+     "detections": []
+    },
+    {
+     "at_ms": 8000,
+     "frame_sha256": "45a1d1c40c8b76cd307304dd1a6de7035c159bdfa6eda82fb70e6f7851cf66ec",
+     "latency_ms": 12.0,
+     "detections": []
+    },
+    {
+     "at_ms": 9000,
+     "frame_sha256": "f188d25b886efc941249e4363d787b4e75e99226536e0c43e97ff6901b131990",
+     "latency_ms": 6.9,
+     "detections": []
+    },
+    {
+     "at_ms": 9950,
+     "frame_sha256": "b3b4424700f1d9e8449e9af3c065b44bedfbdf3e5917005d956bb4f3fc5ef498",
+     "latency_ms": 6.9,
+     "detections": []
+    }
+   ]
+  },
+  "1915d374f833b617d119ee27b327507ffcc2f0f0789a654b8aec70e1419705e3": {
+   "file": "intruder.mp4",
+   "frames": [
+    {
+     "at_ms": 0,
+     "frame_sha256": "9ec52281cc1cb5b00d29b93748755d156692b84c560520336ce57c2eef8350ba",
+     "latency_ms": 9.2,
+     "detections": [
+      {
+       "label": "person",
+       "score": 1.891,
+       "box": {
+        "x": 0.4328125,
+        "y": 0.28888888888888886,
+        "width": 0.115625,
+        "height": 0.4111111111111111
+       }
+      }
+     ]
+    },
+    {
+     "at_ms": 1000,
+     "frame_sha256": "bca4f36b390aa3188f07c7bedb2c89c91cef4ef1a62ad4f0ae1f9e1d7f3d6823",
+     "latency_ms": 7.3,
+     "detections": [
+      {
+       "label": "person",
+       "score": 4.342,
+       "box": {
+        "x": 0.43125,
+        "y": 0.3,
+        "width": 0.1265625,
+        "height": 0.45
+       }
+      }
+     ]
+    },
+    {
+     "at_ms": 2000,
+     "frame_sha256": "6825eb4be7ef0da75580d56a8c5a2929182065b1a684c7aec5bed53bdab94dca",
+     "latency_ms": 7.7,
+     "detections": [
+      {
+       "label": "person",
+       "score": 3.377,
+       "box": {
+        "x": 0.440625,
+        "y": 0.3527777777777778,
+        "width": 0.1296875,
+        "height": 0.46111111111111114
+       }
+      }
+     ]
+    },
+    {
+     "at_ms": 3000,
+     "frame_sha256": "6de0a4810f3cebc069da584c1a181e55fcda880e8c2406098774c813ce491202",
+     "latency_ms": 7.4,
+     "detections": [
+      {
+       "label": "person",
+       "score": 3.488,
+       "box": {
+        "x": 0.415625,
+        "y": 0.3527777777777778,
+        "width": 0.178125,
+        "height": 0.6333333333333333
+       }
+      }
+     ]
+    },
+    {
+     "at_ms": 4000,
+     "frame_sha256": "27d67cfa9985e18a9735db7ce302d610928c2fafc5570ec7d4f25faab2ae0112",
+     "latency_ms": 9.8,
+     "detections": []
+    },
+    {
+     "at_ms": 5000,
+     "frame_sha256": "6cfccdf3f33d0727ba230342ebeb49987aa01c2505fc2eaf892acaa3b8e691dd",
+     "latency_ms": 6.9,
+     "detections": []
+    },
+    {
+     "at_ms": 6000,
+     "frame_sha256": "9640ec86b804fac4f4afbd3148008986da051b1c514c2fda90633ab14865fee2",
+     "latency_ms": 10.0,
+     "detections": []
+    },
+    {
+     "at_ms": 7000,
+     "frame_sha256": "f2593dd248cd3e6ca506c22bc2b3f2d6aad166cbb73bc1ecdb6c950ea19b8ae8",
+     "latency_ms": 9.1,
+     "detections": []
+    },
+    {
+     "at_ms": 8000,
+     "frame_sha256": "b662120cd68d81e3b5c6e241c54d1aa93d7a71c09a284d5e846b9eb2eeeb96e0",
+     "latency_ms": 11.6,
+     "detections": []
+    },
+    {
+     "at_ms": 9000,
+     "frame_sha256": "c36b027d36b52b124266ec15ef8c13817638d499aba3121d6cebc318235ef003",
+     "latency_ms": 6.6,
+     "detections": []
+    },
+    {
+     "at_ms": 9950,
+     "frame_sha256": "ccb6314bbe4af9d048dfc852fa3a1cf97e68c912780628ca6413e0060f912678",
+     "latency_ms": 6.6,
+     "detections": []
+    }
+   ]
+  },
+  "a11503037a3b97cd8092436f3ca9a717e4835f6867eb870d36c6175c30445cea": {
+   "file": "package.mp4",
+   "frames": [
+    {
+     "at_ms": 0,
+     "frame_sha256": "b29cbebc7a5a28ca4aa4d7d1635fa8f9e9a4f41bd36b1413e5f7bdf60eed98f4",
+     "latency_ms": 10.3,
+     "detections": [
+      {
+       "label": "person",
+       "score": 2.749,
+       "box": {
+        "x": 0.4125,
+        "y": 0.21944444444444444,
+        "width": 0.1453125,
+        "height": 0.5166666666666667
+       }
+      }
+     ]
+    },
+    {
+     "at_ms": 1000,
+     "frame_sha256": "175866835ccfc6be50ed804c901eef2254734f657f6d3f622a06d33836f3bad5",
+     "latency_ms": 7.2,
+     "detections": [
+      {
+       "label": "person",
+       "score": 1.49,
+       "box": {
+        "x": 0.38125,
+        "y": 0.17222222222222222,
+        "width": 0.2140625,
+        "height": 0.7611111111111111
+       }
+      }
+     ]
+    },
+    {
+     "at_ms": 2000,
+     "frame_sha256": "738749e8b02df8f36253aef0bc44c1065d4551a3796944bf06b65075d2f10b8b",
+     "latency_ms": 10.5,
+     "detections": [
+      {
+       "label": "person",
+       "score": 0.95,
+       "box": {
+        "x": 0.4734375,
+        "y": 0.21388888888888888,
+        "width": 0.153125,
+        "height": 0.5416666666666666
+       }
+      }
+     ]
+    },
+    {
+     "at_ms": 3000,
+     "frame_sha256": "ec2f8da1f1f5ababc49d9ffd16186242a6d325d940600ad82fe889f47aab8089",
+     "latency_ms": 6.9,
+     "detections": [
+      {
+       "label": "person",
+       "score": 1.039,
+       "box": {
+        "x": 0.471875,
+        "y": 0.5583333333333333,
+        "width": 0.121875,
+        "height": 0.43333333333333335
+       }
+      }
+     ]
+    },
+    {
+     "at_ms": 4000,
+     "frame_sha256": "3e5cc0e51ba8c0480afdd4722dbaa090ca2d647de319dd400c5d6179b61cf63a",
+     "latency_ms": 9.1,
+     "detections": []
+    },
+    {
+     "at_ms": 5000,
+     "frame_sha256": "bf66f66fcd817bbee3112704bc09ff5e03442d7bafd0e86c5ac40af2a91b43cf",
+     "latency_ms": 7.0,
+     "detections": [
+      {
+       "label": "person",
+       "score": 1.324,
+       "box": {
+        "x": 0.45625,
+        "y": 0.5694444444444444,
+        "width": 0.1203125,
+        "height": 0.4305555555555556
+       }
+      }
+     ]
+    },
+    {
+     "at_ms": 6000,
+     "frame_sha256": "3dc9bd311c54d66a4c88899ebd415fe0f4727a2086409e776e115a0aeef61fb5",
+     "latency_ms": 11.3,
+     "detections": []
+    },
+    {
+     "at_ms": 7000,
+     "frame_sha256": "b80fbc1507d3eeb89c61ba7f9713518bc4e14af75820b1e75060213694e47a56",
+     "latency_ms": 6.5,
+     "detections": [
+      {
+       "label": "person",
+       "score": 0.452,
+       "box": {
+        "x": 0.4828125,
+        "y": 0.3861111111111111,
+        "width": 0.10625,
+        "height": 0.38055555555555554
+       }
+      }
+     ]
+    },
+    {
+     "at_ms": 8000,
+     "frame_sha256": "be58322acdc25b94a3ba0a3641e3f83eeb39a4f81fdad72b0a688081c22f239e",
+     "latency_ms": 8.0,
+     "detections": []
+    },
+    {
+     "at_ms": 9000,
+     "frame_sha256": "7564311c151bf13da8154ff6e81c767e0c5d0f3809f7daa21251127a2580626f",
+     "latency_ms": 7.5,
+     "detections": [
+      {
+       "label": "person",
+       "score": 1.597,
+       "box": {
+        "x": 0.4,
+        "y": 0.18055555555555555,
+        "width": 0.1953125,
+        "height": 0.6916666666666667
+       }
+      }
+     ]
+    },
+    {
+     "at_ms": 9950,
+     "frame_sha256": "f2c09884ee51b27ba59f71445455ac4aa30373580bd455b95b81e7e9e1ad46d9",
+     "latency_ms": 6.6,
+     "detections": [
+      {
+       "label": "person",
+       "score": 2.798,
+       "box": {
+        "x": 0.434375,
+        "y": 0.24722222222222223,
+        "width": 0.1265625,
+        "height": 0.4527777777777778
+       }
+      }
+     ]
+    }
+   ]
+  },
+  "23b9d25718bc2b75200149b45b5d0174b4028f95431e06f4a49178a81d5969b6": {
+   "file": "sample-20s.mp4",
+   "frames": [
+    {
+     "at_ms": 0,
+     "frame_sha256": "da1bd4bb499bebe0d8e33ebfd83a17cad89ae622a3a784b010fa26e4a40ff180",
+     "latency_ms": 11.5,
+     "detections": []
+    },
+    {
+     "at_ms": 1835,
+     "frame_sha256": "259a4871cffa08dd0f9ed71f005563335be70437b36eebdd41ac6a4a81b72a3f",
+     "latency_ms": 12.8,
+     "detections": []
+    },
+    {
+     "at_ms": 3670,
+     "frame_sha256": "2deab313747783492e8dfab9839e7c876a9c4d0ffd0b5b16265a19e16e9763d7",
+     "latency_ms": 11.9,
+     "detections": []
+    },
+    {
+     "at_ms": 5506,
+     "frame_sha256": "2c55237a5b5b83ecdd96ac85838ba8eed95e0e5523b1960133de292243d60802",
+     "latency_ms": 11.1,
+     "detections": []
+    },
+    {
+     "at_ms": 7341,
+     "frame_sha256": "c269df8520c24c1a90a12a2d1095b8b8e2779308b8107c8e04f4a2f58de59a64",
+     "latency_ms": 12.4,
+     "detections": []
+    },
+    {
+     "at_ms": 9176,
+     "frame_sha256": "c6844504388f0208758ee4a7fcd13b78024b78f7a1d8c2f0e60d4a3d58a6636f",
+     "latency_ms": 7.5,
+     "detections": []
+    },
+    {
+     "at_ms": 11011,
+     "frame_sha256": "d4a3ff45b1b9f84197110381d8ef09701231cc96df341e9398acf88ac218058b",
+     "latency_ms": 6.9,
+     "detections": []
+    },
+    {
+     "at_ms": 12846,
+     "frame_sha256": "0fe0a2f68eb07ab252a3780d6238de1ce237b8b2e4bfefbcbf9c15058814bb7a",
+     "latency_ms": 8.1,
+     "detections": []
+    },
+    {
+     "at_ms": 14681,
+     "frame_sha256": "939e9e82e5db1d3100666b9b4c214d5dd2e7a6900c476a56963073132c68f5d3",
+     "latency_ms": 6.9,
+     "detections": []
+    },
+    {
+     "at_ms": 16516,
+     "frame_sha256": "bdfc916304c5fe37c4063b38ea9868f8a8d374d3a691def4b00e5cd045f9c481",
+     "latency_ms": 6.8,
+     "detections": []
+    },
+    {
+     "at_ms": 18352,
+     "frame_sha256": "748b9ec15749ca30b9686c1d4d9cd63dcb73840e5c24afcb13d30f8d28ac2577",
+     "latency_ms": 8.1,
+     "detections": []
+    },
+    {
+     "at_ms": 20137,
+     "frame_sha256": "9897594a7a4d80f837ad6a8d5f0ca0d489233f4458d12a454c71024d4cc5a7e6",
+     "latency_ms": 10.4,
+     "detections": []
+    }
+   ]
+  }
+ }
+}

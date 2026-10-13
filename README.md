@@ -27,21 +27,23 @@ Camera feeds produce far more footage than a person can continuously inspect. Ap
 
 ## Hackathon Pitch — OpenCV AI Competition 2026
 
-**Give your application a pair of eyes.** AutoVision turns images and short clips into measurable visual signals: motion across time, pedestrian detections, and optional Nova Lite scene descriptions and package locations. Developers can use the same analysis through an interactive demo, REST API, or MCP tool instead of rebuilding a vision service for every application.
+**Give your application a pair of eyes.** AutoVision turns images and short clips into measurable visual signals: motion across time, OpenCV object detections (people, pets, vehicles and other COCO categories), and optional Nova Lite scene descriptions and package locations. Developers can use the same analysis through an interactive demo, REST API, or MCP tool instead of rebuilding a vision service for every application.
 
 AutoVision is being prepared for the [OpenCV AI Competition 2026, powered by AWS](https://opencv26.devpost.com/). OpenCV performs the actual image processing; AWS supplies the deployment platform and optional Bedrock inference. The intended demonstration combines a camera-style clip, explainable results, private job history, and an agent consuming the same tools.
 
-The core service uses **OpenCV 5.0.0** for image decoding, resizing, grayscale conversion, frame differencing, thresholding, changed-pixel measurements and JPEG previews. Pedestrian detection uses a separately isolated OpenCV 4.13 HOG adapter; its boxes are not described as OpenCV 5 object inference. Nova Lite supplies optional scene summaries and advisory package boxes. REST and MCP share this pipeline.
+The service uses **OpenCV 5.0.0** end to end: image decoding, resizing, grayscale conversion, frame differencing, thresholding, changed-pixel measurements, JPEG previews and object detection. A pinned, checksum-verified [OpenCV Zoo YOLOX](https://github.com/opencv/opencv_zoo/tree/47534e27c9851bb1128ccc0102f1145e27f23f98/models/object_detection_yolox) model (Apache-2.0) runs in-process through `cv2.dnn` and detects people plus the requested COCO-80 categories on every sampled frame. Nova Lite supplies optional scene summaries and advisory package, smoke and fire boxes. REST and MCP share this pipeline.
 
 ### Technical report and reproducible evaluation
 
 AutoVision serves developers adding visual observations to camera, workflow and agent applications. Browser sampling keeps original video/audio local and sends bounded image samples. New jobs retain small sampled previews and structured observations for seven days, not the original clip. Settings includes organization-specific AI categories and a confirmed history purge; see [object detection and privacy](OBJECT_DETECTION.md). See the [architecture diagram](public/architecture.svg) and [editable source](devops/testing/architecture.mmd).
 
-The synthetic evaluation uses five repetitions per two-frame 320×180 sequence. On local x86-64 Docker on October 9, 2026, measured changed-pixel fractions exactly matched generated masks: 0%, 5%, 50% and 100%. Median vision latencies, including pedestrian subprocess overhead, were 483, 448, 471 and 479 ms. These are machine-specific measurements, not throughput guarantees or real-world detector accuracy.
+The synthetic evaluation uses five repetitions per two-frame 320×180 sequence. On local x86-64 Docker on October 13, 2026, measured changed-pixel fractions exactly matched generated masks: 0%, 5%, 50% and 100%, with median two-frame analysis latencies of 77–79 ms (the retired HOG subprocess path measured 448–483 ms on October 9). These are machine-specific measurements, not throughput guarantees or real-world detector accuracy.
 
-The lighting-change case documents a failure mode: brightness shifts trigger motion without proving an intruder. HOG can miss people and produce false positives. Nova grounding is advisory, not a calibrated probability; sampled frames can miss events. Smoke/fire require separate validation and cannot replace certified alarms. Embedded image instructions are untrusted.
+The detector evaluation samples the four demo clips and a freely licensed [samplelib street clip](https://download.samplelib.com/mp4/sample-20s.mp4) exactly like the browser (56 frames) and compares YOLOX with a recorded OpenCV 4.13 HOG historical baseline ([`hog_baseline.json`](devops/testing/hog_baseline.json), produced by [`hog-baseline.py`](devops/testing/hog-baseline.py); all 56 frames byte-identical). YOLOX found the person in 11/11 backyard, 10/11 doorbell and 11/11 delivery frames, where HOG found 4, 4 and 8, and found the dog in 8/11 night frames, which HOG cannot detect. On that x86-64 machine YOLOX took 38 ms median and 40 ms p95 per 640-pixel frame versus 7.5 ms for HOG. Fargate measurements are pending. There is no hand-labelled ground truth, so these are presence counts, not precision or recall.
 
-Reproduce with `docker compose run --rm --no-deps autovision-vision python -m unittest discover -s src/vision -v` and `docker compose run --rm --no-deps autovision-vision python src/vision/evaluate.py`. Run `npm run test:mcp:local`; add `AUTOVISION_TEST_BEDROCK=true` when dedicated local credentials are configured.
+The lighting-change case documents a failure mode: brightness shifts trigger motion without proving an intruder. Observed YOLOX failures: a person's shadow on a fence counted as a second person, the night dog scored as a person (0.63) on one Live Lab frame, a ball labelled frisbee, a dog labelled horse in one frame, and a cardboard parcel labelled suitcase (package stays with Bedrock grounding). Detector scores are not calibrated probabilities. Nova grounding is advisory, not a calibrated probability; sampled frames can miss events. Smoke/fire require separate validation and cannot replace certified alarms. Embedded image instructions are untrusted.
+
+Reproduce with `docker compose run --rm --no-deps -v "$PWD/public:/app/public:ro" autovision-vision python -m unittest discover -s src/vision -v` (detector tests read the demo poster from `public/`) and `docker compose run --rm --no-deps autovision-vision python src/vision/evaluate.py`. For the detector evaluation, also mount `-v "$PWD/public:/media:ro" -v "$PWD/devops/testing:/app/devops/testing:ro"` (the dev-only HOG baseline is not in the image) and pass clip paths such as `/media/intruder.mp4` after `evaluate.py`. Run `npm run test:mcp:local`; add `AUTOVISION_TEST_BEDROCK=true` when dedicated local credentials are configured.
 
 Submission packaging includes the submitted revision, setup, report with representative-media evaluation, exported architecture, judge access and a public/unlisted video no longer than five minutes. Single-call classification does not establish the optional Agentic Vision award; COOL acceleration is not claimed. Follow the [requirements](https://opencv26.devpost.com/) and [rules](https://opencv26.devpost.com/rules). The page displays conflicting October 26 cutoff times; use the earlier 11:45 PM Pacific cutoff unless clarified.
 
@@ -68,7 +70,7 @@ The current hosted stack, `autovision-apphub-v011`, runs on the shared AppHub Fa
 - Deterministic demonstration rules for smoke, temperature, and CO readings; motion and person signals are also accepted.
 - Asynchronous incident processing with optional Bedrock enrichment and configured SES email delivery.
 - Bearer API keys revealed once at creation and stored as hashes.
-- OpenCV motion measurements and pedestrian boxes for images and up to 12 sampled video frames.
+- OpenCV 5 motion measurements and YOLOX object boxes (person plus selected COCO-80 categories) for images and up to 12 sampled video frames.
 - Optional Nova Lite summaries and advisory package boxes on the first, middle, and last supplied frames.
 - REST and MCP analysis with shared API keys; session-authorized manual runs and private seven-day job history.
 - SaaS and private-install modes using the same application images.
@@ -81,7 +83,7 @@ The current hosted stack, `autovision-apphub-v011`, runs on the shared AppHub Fa
 | Web | Next.js/React console, workspace selection, devices, incidents, users, settings |
 | API | Next.js route handlers under `src/app/api`, authentication, tenant-scoped operations |
 | Worker | SQS incident processing, optional Bedrock assessment, configured email notification |
-| Vision | OpenCV motion/pedestrian analysis plus optional Nova Lite object grounding |
+| Vision | OpenCV 5 motion and YOLOX COCO-80 detection plus optional Nova Lite package, smoke and fire grounding |
 | Persistence | DynamoDB job results/thumbnails, private evidence S3, SQS and a dead-letter queue; original demo videos are not stored |
 | Local runtime | Root Docker Compose, Dockerfiles in `devops`, DynamoDB Local and ElasticMQ |
 | AWS runtime | ECS Fargate, ALB, IAM, CloudWatch, optional ACM HTTPS and Route 53 aliases |
@@ -174,8 +176,8 @@ Review each resource's deletion/retention policy before removing a stack. Export
 
 ## Scope And Safety
 
-- OpenCV motion/pedestrian analysis and optional Nova Lite package grounding are implemented and tested locally. Smoke/fire grounding is opt-in and advisory; no trained or validated smoke/fire detector, COOL acceleration, or direct Ring integration is claimed.
-- Core processing uses OpenCV 5.0.0; isolated HOG uses OpenCV 4.13.0. Optional agentic-loop awards are not claimed.
+- OpenCV 5 motion and YOLOX object detection and optional Nova Lite package grounding are implemented and tested locally. Smoke/fire grounding is opt-in and advisory; no trained or validated smoke/fire detector, COOL acceleration, or direct Ring integration is claimed.
+- All image processing and object detection use OpenCV 5.0.0. Optional agentic-loop awards are not claimed.
 - Sensor thresholds are demonstration rules, not certified alarms or life-safety equipment.
 - Optional Bedrock failures do not prevent deterministic incident persistence.
 - AgentCore runtime integration is not implemented in this repository.
@@ -187,9 +189,9 @@ First-party code is [AGPL-3.0-or-later](LICENSE). Commercial and hosted use are 
 
 ## Adding detection categories
 
-AutoVision combines OpenCV motion/pedestrian measurements with optional Amazon Nova Lite image grounding. Package boxes are enabled with AI classification. They are labeled `source: bedrock`, `advisory: true`, with normalized `x/y/width/height`; no invented confidence score is returned. Nova checks the first, middle, and last supplied frames only (one image for an image job). `classification.checked_frames` reports their zero-based indices. Unchecked frames are not evidence of absence. Invalid AI JSON is rejected; measured OpenCV results remain available if AI fails.
+AutoVision combines OpenCV 5 motion and YOLOX object measurements with optional Amazon Nova Lite image grounding for package, smoke and fire. Those boxes are enabled with AI classification. They are labeled `source: bedrock`, `advisory: true`, with normalized `x/y/width/height`; no invented confidence score is returned. Nova checks the first, middle, and last supplied frames only (one image for an image job). `classification.checked_frames` reports their zero-based indices. Unchecked frames are not evidence of absence. Invalid AI JSON is rejected; measured OpenCV results remain available if AI fails.
 
-For Docker, set `AUTOVISION_AI_DETECTIONS=package,smoke,fire` in your ignored `.env`, then recreate the web/API containers using the same Compose overrides you launched with. These are visual candidates, not verified fire/smoke alarms. Steam, fog, reflections, occlusion and illustrations can cause mistakes. With AI disabled or Bedrock unavailable, package/smoke/fire detection is unavailable—not a negative result. Original videos are not stored.
+For Docker, append `,smoke,fire` to the default `AUTOVISION_AI_DETECTIONS` list in your ignored `.env` (COCO labels in the same list select OpenCV YOLOX defaults), then recreate the web/API containers using the same Compose overrides you launched with. These are visual candidates, not verified fire/smoke alarms. Steam, fog, reflections, occlusion and illustrations can cause mistakes. With AI disabled or Bedrock unavailable, package/smoke/fire detection is unavailable—not a negative result. Original videos are not stored.
 
 To add another AI category:
 
@@ -210,7 +212,7 @@ Nova supports bounding-box image grounding: [AWS documentation](https://docs.aws
 | --- | --- |
 | Public website and console | Public demo, SaaS signup, organization selection, API keys, usage/plans, settings, and private job history. Private installations disable public signup. |
 | Image and sampled-video analysis | REST and MCP share bounded analysis; step through saved previews with normalized object boxes and sample timestamps. Original MP4s are not retained. |
-| Object selection | Organization defaults and per-request `detection_labels` select from the catalog. Catalog entries do not imply a trained OpenCV detector for every category: the current measured detector is HOG person detection, with optional Bedrock grounding for selected additional labels. |
+| Object selection | Organization defaults and per-request `detection_labels` select from the catalog. COCO-80 labels are measured by the OpenCV 5 YOLOX model on every sampled frame, with or without `classify` (person is always included); package, smoke and fire use optional advisory Bedrock grounding. |
 | Privacy | Purge saved analysis history and previews without deleting organizations or API credentials. Consumers such as SmartDetector have their own retention controls. |
 | Optional face measurements | Separate authenticated, quota-metered `POST /api/v1/faces` returns face boxes and embeddings, without creating saved jobs or maintaining a face gallery. Requires operator-supplied models. |
 | Deployment | Same web/API/worker/vision images support SaaS and private installations. CloudFormation controls AWS updates. COOL is optional configuration, not a demonstrated acceleration claim. |

@@ -3,13 +3,11 @@ import base64
 import json
 import time
 import threading
-import subprocess
-import os
-from pathlib import Path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import cv2
 import numpy as np
 from faces import measure_faces, FaceModelsUnavailable
+from objects import detect_objects, detector_version, requested_labels, ObjectModelUnavailable
 
 _slots = threading.BoundedSemaphore(2)
 
@@ -40,24 +38,22 @@ def analyze(v):
             raise ValueError("Invalid frame timestamp")
         decode_image(frame.get("image"))
         last_at = at
-    pedestrian_python = os.environ.get('AUTOVISION_PEDESTRIAN_PYTHON')
-    if not pedestrian_python:
-        raise RuntimeError('Pedestrian detector runtime is not configured')
-    people = subprocess.run([pedestrian_python, str(Path(__file__).with_name('pedestrian.py'))],
-                            input=json.dumps(frames), text=True, capture_output=True, timeout=35, check=True)
-    person_boxes = json.loads(people.stdout)
+    labels = requested_labels(v.get('detection_labels'))
+    version = detector_version()
     results, previous, last_at = [], None, -1
-    for frame_index, frame in enumerate(frames):
+    for frame in frames:
         at = frame.get('at_ms')
         if isinstance(at, bool) or not isinstance(at, (int, float)) or not np.isfinite(at) or not last_at < at <= 30000:
             raise ValueError('Frame timestamps must increase within 30 seconds')
         current = decode_image(frame.get('image'))
-        boxes = person_boxes[frame_index]
+        boxes = detect_objects(current, labels)
         gray = cv2.resize(cv2.cvtColor(current, cv2.COLOR_BGR2GRAY), (320, 180))
         motion = None if previous is None else float(cv2.countNonZero(cv2.threshold(cv2.absdiff(gray, previous), 30, 255, cv2.THRESH_BINARY)[1]) / gray.size)
-        observations = [{'type': 'person', 'value': len(boxes), 'detected': bool(boxes)}]
+        counts = {label: sum(1 for box in boxes if box['label'] == label) for label in labels}
+        observations = [{'type': 'person', 'value': counts['person'], 'detected': counts['person'] > 0}]
         if motion is not None:
             observations.append({'type': 'motion', 'value': motion, 'detected': motion > 0.01})
+        observations += [{'type': label, 'value': counts[label], 'detected': counts[label] > 0} for label in labels[1:]]
         # Bounded, aspect-preserving evidence; <=12 small JPEGs keeps each job
         # below DynamoDB's item limit without retaining the source video.
         h, w = current.shape[:2]
@@ -68,7 +64,12 @@ def analyze(v):
         results.append({'at_ms': at, 'observations': observations, 'detections': boxes, 'preview': preview})
         previous, last_at = gray, at
     thumbnail = base64.b64encode(cv2.imencode('.jpg', cv2.resize(decode_image(frames[0]['image']), (160, 90)), [cv2.IMWRITE_JPEG_QUALITY, 50])[1]).decode()
-    return {'thumbnail': thumbnail, 'frames': results, 'observations': [{'type': 'person', 'value': max(f['observations'][0]['value'] for f in results), 'detected': any(f['detections'] for f in results)}, {'type': 'motion', 'value': max((o['value'] for f in results for o in f['observations'] if o['type'] == 'motion'), default=0), 'detected': any(o['detected'] for f in results for o in f['observations'] if o['type'] == 'motion')}], 'engine': 'opencv5-motion+legacy-hog', 'engine_version': cv2.__version__, 'detector_version': 'opencv4-hog-4.13.0', 'metrics': {'latency_ms': round((time.perf_counter() - start) * 1000, 3)}, 'limitations': ['Pedestrian detector, not a general object or fire classifier.', 'Detector scores are not calibrated probabilities.', 'Sampled frames may miss events between samples.']}
+    def peak(label):
+        value = max(o['value'] for f in results for o in f['observations'] if o['type'] == label)
+        return {'type': label, 'value': value, 'detected': value > 0}
+    observations = [peak('person'), {'type': 'motion', 'value': max((o['value'] for f in results for o in f['observations'] if o['type'] == 'motion'), default=0), 'detected': any(o['detected'] for f in results for o in f['observations'] if o['type'] == 'motion')}]
+    observations += [peak(label) for label in labels[1:]]
+    return {'thumbnail': thumbnail, 'frames': results, 'observations': observations, 'engine': 'opencv5-motion+yolox', 'engine_version': cv2.__version__, 'detector_version': version, 'metrics': {'latency_ms': round((time.perf_counter() - start) * 1000, 3)}, 'limitations': ['COCO-80 object detector, not a smoke, fire or safety classifier.', 'Detector scores are not calibrated probabilities.', 'Sampled frames may miss events between samples.']}
 
 
 def detect(v):
@@ -125,7 +126,9 @@ class Handler(BaseHTTPRequestHandler):
             self.respond(200, result)
         except FaceModelsUnavailable:
             self.respond(503, {'error': 'Face measurement models unavailable'})
-        except (ValueError, TypeError, KeyError, cv2.error, subprocess.SubprocessError, RuntimeError):
+        except ObjectModelUnavailable:
+            self.respond(503, {'error': 'Object detection model unavailable'})
+        except (ValueError, TypeError, KeyError, cv2.error, RuntimeError):
             self.respond(400, {'error': 'Invalid images or detection options'})
         finally:
             _slots.release()

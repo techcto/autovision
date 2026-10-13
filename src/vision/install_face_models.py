@@ -1,4 +1,4 @@
-"""Fetch pinned OpenCV Zoo weights and their notices at image build time."""
+"""Fetch pinned OpenCV Zoo face and object-detection weights and their notices at image build time."""
 import hashlib
 from pathlib import Path
 import urllib.request
@@ -7,6 +7,7 @@ REVISION = '47534e27c9851bb1128ccc0102f1145e27f23f98'
 MODELS = (
     ('yunet', 'face_detection_yunet', 'face_detection_yunet_2026may.onnx', 'ebafce4e3c118d6554634be5c27ab333b4c047a9a8c3faf1d7cf93101c22f0f0'),
     ('sface', 'face_recognition_sface', 'face_recognition_sface_2021dec.onnx', '0ba9fbfa01b5270c96627c4ef784da859931e02f04419c829e83484087c34e79'),
+    ('yolox', 'object_detection_yolox', 'object_detection_yolox_2022nov.onnx', 'c5c2d13e59ae883e6af3b45daea64af4833a4951c92d116ec270d9ddbe998063'),
 )
 
 
@@ -23,7 +24,7 @@ def install(destination):
         with urllib.request.urlopen(license_url, timeout=60) as response:
             notice = response.read(100000)
         (destination / (name + '-LICENSE')).write_bytes(notice)
-    (destination / 'SOURCE.txt').write_text(f'OpenCV Zoo revision {REVISION}\nYuNet: MIT; SFace: Apache-2.0. See included license notices.\n')
+    (destination / 'SOURCE.txt').write_text(f'OpenCV Zoo revision {REVISION}\nYuNet: MIT; SFace: Apache-2.0; YOLOX: Apache-2.0. See included license notices.\n')
 
 
 if __name__ == '__main__':
