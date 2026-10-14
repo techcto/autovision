@@ -2,7 +2,8 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {validateAnalysis} from '../src/lib/media-contract';
 import {defaultInspection,validateInspection} from '../src/lib/inspection-config';
-import {inspectAutonomously} from '../src/lib/autonomous-inspection';
+import {checkToolArgs,executeInspectionTool,inspectAutonomously} from '../src/lib/autonomous-inspection';
+import {MediaError} from '../src/lib/media-contract';
 import {approvedModels,resolveModel,visionLenses} from '../src/lib/vision-lenses';
 const image=Buffer.from([255,216,255,0]).toString('base64');
 const input={frames:[{image,at_ms:0}],classify:true};
@@ -47,4 +48,43 @@ test('a bounded batch of lens calls executes sequentially and all evidence retur
  },fetcher:async()=>Response.json({result:{engine_version:'5.0.0',frames:[]}})});
  assert.equal(result.status,'complete');assert.equal(charges,2);assert.deepEqual(result.trace.map(t=>t.step),[0,1,2]);
  delete process.env.AUTOVISION_VISION_MODEL_ID;
+});
+test('standalone lens arguments are rejected before quota and models must match their lens skill',()=>{
+ const before=process.env.AUTOVISION_AI_MODELS_JSON;
+ try{
+  assert.throws(()=>checkToolArgs('inspect_region',{frame_index:5,detection_index:0},input,defaultInspection),/frame index/);
+  assert.throws(()=>checkToolArgs('inspect_region',{frame_index:0,detection_index:20},input,defaultInspection),/detector region/);
+  assert.throws(()=>checkToolArgs('assess_scene',{frame_index:0,focus:'identity'},input,defaultInspection),/focus/);
+  assert.throws(()=>checkToolArgs('enhance_low_light',{frame_index:0},input,{...defaultInspection,tools:['inspect_region']}),/disabled/);
+  assert.equal(checkToolArgs('inspect_region',{frame_index:0,detection_index:0},input,defaultInspection).index,0);
+  process.env.AUTOVISION_AI_MODELS_JSON=JSON.stringify([{id:'detail',label:'Detailed scene',modelId:'test-approved-model',skills:['scene','package']}]);
+  assert.throws(()=>validateInspection({...defaultInspection,model:'detail'},['deployment_default','detail']));
+  assert.throws(()=>validateInspection({...defaultInspection,activityModel:'detail'},['deployment_default','detail']));
+  assert.equal(validateInspection({...defaultInspection,packageModel:'detail'},['deployment_default','detail']).packageModel,'detail');
+  process.env.AUTOVISION_AI_MODELS_JSON='[{"id":"bad"}]';
+  assert.throws(()=>checkToolArgs('assess_scene',{frame_index:0},input,defaultInspection),/model unavailable/);
+ }finally{if(before===undefined)delete process.env.AUTOVISION_AI_MODELS_JSON;else process.env.AUTOVISION_AI_MODELS_JSON=before}
+});
+test('an invalid model registry or exhausted planner allowance keeps initial evidence and recommends review',async()=>{
+ const before=process.env.AUTOVISION_AI_MODELS_JSON;process.env.AUTOVISION_VISION_MODEL_ID='test-model';
+ try{
+  const budget=await inspectAutonomously(input,evidence,defaultInspection,async()=>true,{send:async()=>{throw new MediaError('Public demo daily allowance reached',429)}});
+  assert.equal(budget.status,'quota_exhausted');assert.equal(budget.review_recommended,true);
+  process.env.AUTOVISION_AI_MODELS_JSON='[{"id":"bad"}]';
+  const result=await inspectAutonomously(input,evidence,defaultInspection,async()=>true,{send:async()=>assert.fail('planner must not run')});
+  assert.equal(result.status,'unavailable');assert.equal(result.review_recommended,true);
+ }finally{delete process.env.AUTOVISION_VISION_MODEL_ID;if(before===undefined)delete process.env.AUTOVISION_AI_MODELS_JSON;else process.env.AUTOVISION_AI_MODELS_JSON=before}
+});
+test('advisory Bedrock boxes cannot be cropped for YOLOX re-detection and are not charged',async()=>{
+ const grounded={...evidence,frames:[{...evidence.frames[0],detections:[...evidence.frames[0].detections,{label:'package',source:'bedrock',box:{x:.5,y:.5,width:.2,height:.2}}]}]};let charged=0;
+ await assert.rejects(executeInspectionTool('inspect_region',{frame_index:0,detection_index:1},input,grounded,defaultInspection,async n=>{charged+=n;return true},AbortSignal.timeout(1000),async()=>assert.fail('vision must not run')),/Only OpenCV/);
+ assert.equal(charged,0);
+});
+test('crop re-detection uses the same default labels as the initial pass',async()=>{
+ const before=process.env.AUTOVISION_AI_DETECTIONS;process.env.AUTOVISION_AI_DETECTIONS='person,car,package';let sent:unknown;
+ try{
+  const cars={...evidence,frames:[{...evidence.frames[0],detections:[{label:'car',score:.9,box:{x:.1,y:.1,width:.2,height:.2}}]}]};
+  await executeInspectionTool('inspect_region',{frame_index:0,detection_index:0},{frames:input.frames},cars,defaultInspection,async()=>true,AbortSignal.timeout(1000),async(_url,init)=>{sent=JSON.parse(String(init?.body)).detection_labels;return Response.json({result:{engine_version:'5.0.0',frames:[]}})});
+  assert.deepEqual(sent,['person','car','package']);
+ }finally{if(before===undefined)delete process.env.AUTOVISION_AI_DETECTIONS;else process.env.AUTOVISION_AI_DETECTIONS=before}
 });

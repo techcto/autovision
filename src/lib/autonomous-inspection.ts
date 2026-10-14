@@ -1,29 +1,40 @@
 import {ConverseCommand, type Message, type Tool} from '@aws-sdk/client-bedrock-runtime';
 import {createBedrockClient} from './bedrock-client';
 import {analyzeMedia} from './media-analysis';
+import {enabledAiLabels} from './ai-detections';
 import type {AnalysisInput} from './media-contract';
 import {MediaError} from './media-contract';
 import type {InspectionConfig,InspectionTool} from './inspection-config';
 import {resolveModel} from './vision-lenses';
 import type {PipelineContext} from './pipeline-events';
 type Box={x:number;y:number;width:number;height:number};
-type Evidence={frames:{at_ms:number;quality?:{brightness:number};detections:{label:string;score?:number;box:Box}[]}[];observations:{type:string;detected:boolean;value:number}[];engine_version?:string};
+type Evidence={frames:{at_ms:number;quality?:{brightness:number};detections:{label:string;score?:number;source?:string;box:Box}[]}[];observations:{type:string;detected:boolean;value:number}[];engine_version?:string};
 type Trace={step:number;tool:string;status:string;duration_ms:number;input?:unknown;output?:unknown;reason?:string};
 export type InspectionResult={status:string;review_recommended:boolean;reason:string;trace:Trace[];model?:string;followup_count:number;images_sent_to_bedrock?:boolean};
 const client=createBedrockClient();
-export async function executeInspectionTool(name:InspectionTool,args:Record<string,unknown>,input:AnalysisInput,evidence:Evidence,config:InspectionConfig,charge:(n:number)=>Promise<boolean>,signal:AbortSignal,fetcher:typeof fetch=fetch,onAiSend:()=>void=()=>{}){
+// Argument checks that need no measurement; standalone lens requests run these before any quota is charged.
+export function checkToolArgs(name:InspectionTool,args:Record<string,unknown>,input:AnalysisInput,config:InspectionConfig){
  if(!config.tools.includes(name))throw new MediaError('Inspection tool disabled',403);
- if(evidence.engine_version!=='5.0.0')throw new MediaError('OpenCV 5 measurements required',503);
  const index=args.frame_index;
  if(typeof index!=='number'||!Number.isInteger(index)||!input.frames[index])throw new MediaError('Invalid frame index');
- const frame=input.frames[index],detection=args.detection_index;
- const box=name==='inspect_region'&&typeof detection==='number'&&Number.isInteger(detection)?evidence.frames[index]?.detections[detection]?.box:undefined;
- if(name==='inspect_region'&&!box)throw new MediaError('Invalid detector region');
- if(name==='enhance_low_light'&&(evidence.frames[index]?.quality?.brightness??255)>=config.brightnessThreshold)throw new MediaError('Frame exceeds low-light threshold');
+ const detection=args.detection_index;
+ if(name==='inspect_region'&&(typeof detection!=='number'||!Number.isInteger(detection)||detection<0||detection>19))throw new MediaError('Invalid detector region');
  const focus=args.focus??'scene';
  if(name==='assess_scene'&&focus!=='scene'&&focus!=='package'&&focus!=='activity')throw new MediaError('Invalid AI focus');
- const modelId=name==='assess_scene'?resolveModel((focus==='package'?config.packageModel:focus==='activity'?config.activityModel:config.sceneModel)??'deployment_default',focus as 'scene'|'package'|'activity'):undefined;
+ let modelId:string|undefined;
+ try{modelId=name==='assess_scene'?resolveModel((focus==='package'?config.packageModel:focus==='activity'?config.activityModel:config.sceneModel)??'deployment_default',focus as 'scene'|'package'|'activity'):undefined;}catch{/* Invalid deployment registry is reported as an unavailable model. */}
  if(name==='assess_scene'&&!modelId)throw new MediaError('AI lens model unavailable',503);
+ return{index,detection:detection as number|undefined,focus,modelId};
+}
+export async function executeInspectionTool(name:InspectionTool,args:Record<string,unknown>,input:AnalysisInput,evidence:Evidence,config:InspectionConfig,charge:(n:number)=>Promise<boolean>,signal:AbortSignal,fetcher:typeof fetch=fetch,onAiSend:()=>void=()=>{}){
+ const {index,detection,focus,modelId}=checkToolArgs(name,args,input,config);
+ if(evidence.engine_version!=='5.0.0')throw new MediaError('OpenCV 5 measurements required',503);
+ const frame=input.frames[index];
+ const selected=name==='inspect_region'?evidence.frames[index]?.detections[detection!]:undefined,box=selected?.box;
+ if(name==='inspect_region'&&!box)throw new MediaError('Invalid detector region');
+ // YOLOX cannot re-detect advisory Bedrock categories such as package; use assess_scene for those.
+ if(selected?.source==='bedrock')throw new MediaError('Only OpenCV detector regions can be re-detected');
+ if(name==='enhance_low_light'&&(evidence.frames[index]?.quality?.brightness??255)>=config.brightnessThreshold)throw new MediaError('Frame exceeds low-light threshold');
  if(!await charge(1))throw new MediaError('Follow-up image quota reached',429);
  let output:unknown;
  if(name==='assess_scene'){
@@ -31,7 +42,8 @@ export async function executeInspectionTool(name:InspectionTool,args:Record<stri
   if(assessment.classification.status!=='complete')throw new MediaError('Focused assessment unavailable',503);
   output={focus,model:modelId,classification:assessment.classification,observations:assessment.observations};
  }else{
-  const response=await fetcher((process.env.AUTOVISION_VISION_URL??'http://localhost:8000')+'/inspect',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({operation:name,image:frame.image,detection_labels:input.detection_labels,...(box?{box,padding:config.cropPadding}:{strength:config.claheStrength})}),signal});
+  // Re-detect with the same default labels as the initial pass, or COCO labels such as car are never re-measured.
+  const response=await fetcher((process.env.AUTOVISION_VISION_URL??'http://localhost:8000')+'/inspect',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({operation:name,image:frame.image,detection_labels:input.detection_labels??enabledAiLabels(),...(box?{box,padding:config.cropPadding}:{strength:config.claheStrength})}),signal});
   if(!response.ok)throw new MediaError('Inspection tool unavailable',503);
   const value=await response.json();if(value.result?.engine_version!=='5.0.0')throw new MediaError('OpenCV 5 follow-up required',503);
   output={...value,source_frame_index:index,source_at_ms:frame.at_ms};
@@ -39,14 +51,15 @@ export async function executeInspectionTool(name:InspectionTool,args:Record<stri
  return{output,traceInput:{frame_index:index,...(box?{box,padding:config.cropPadding}:name==='enhance_low_light'?{strength:config.claheStrength}:{focus})}};
 }
 const finishTool:Tool={toolSpec:{name:'finish',description:'Finish with an advisory human-review recommendation, never identity or danger determination.',inputSchema:{json:{type:'object',properties:{review_recommended:{type:'boolean'},reason:{type:'string',maxLength:500}},required:['review_recommended','reason'],}}}};
-function toolSpec(name:InspectionTool,frameCount=12):Tool{return{toolSpec:{name,description:name==='inspect_region'?'Crop an existing detector box and rerun OpenCV YOLOX.':name==='enhance_low_light'?'Apply bounded CLAHE contrast enhancement and rerun OpenCV YOLOX. Does not recover missing detail.':'Request a focused advisory Bedrock scene assessment of one supplied frame.',inputSchema:{json:{type:'object',properties:{frame_index:{type:'integer',minimum:0,maximum:frameCount-1},...(name==='inspect_region'?{detection_index:{type:'integer',minimum:0,maximum:19}}:name==='assess_scene'?{focus:{type:'string',enum:['scene','package','activity']}}:{})},required:name==='inspect_region'?['frame_index','detection_index']:['frame_index'],}}}}}
+function toolSpec(name:InspectionTool,frameCount=12):Tool{return{toolSpec:{name,description:name==='inspect_region'?'Crop an existing OpenCV detector box and rerun OpenCV YOLOX. Advisory Bedrock boxes (source bedrock) cannot be re-detected; use assess_scene.':name==='enhance_low_light'?'Apply bounded CLAHE contrast enhancement and rerun OpenCV YOLOX. Does not recover missing detail.':'Request a focused advisory Bedrock scene assessment of one supplied frame.',inputSchema:{json:{type:'object',properties:{frame_index:{type:'integer',minimum:0,maximum:frameCount-1},...(name==='inspect_region'?{detection_index:{type:'integer',minimum:0,maximum:19}}:name==='assess_scene'?{focus:{type:'string',enum:['scene','package','activity']}}:{})},required:name==='inspect_region'?['frame_index','detection_index']:['frame_index'],}}}}}
 export function inspectionTriggered(evidence:Evidence,config:InspectionConfig){return evidence.frames.some(f=>f.detections.some(d=>config.triggers.includes(d.label as InspectionConfig['triggers'][number]))||config.tools.includes('enhance_low_light')&&(f.quality?.brightness??255)<config.brightnessThreshold)||evidence.observations.some(o=>o.detected&&config.triggers.includes(o.type as InspectionConfig['triggers'][number]));}
 export async function inspectAutonomously(input:AnalysisInput,evidence:Evidence,config:InspectionConfig,charge:(frames:number)=>Promise<boolean>,deps?:PipelineContext&{send?:(command:ConverseCommand,signal:AbortSignal)=>Promise<unknown>;fetcher?:typeof fetch}):Promise<InspectionResult>{
  const trace:Trace[]=[];let followups=0,imagesSent=false,activeStep='inspection',activeName='planner';
  const fail=(status:string,reason:string):InspectionResult=>({status,review_recommended:true,reason,trace,followup_count:followups,images_sent_to_bedrock:imagesSent});
  if(evidence.engine_version!=='5.0.0')return fail('unavailable','Enhanced inspection requires verified OpenCV 5.0.0 measurements.');
  if(!inspectionTriggered(evidence,config))return{status:'not_triggered',review_recommended:false,reason:'No configured trigger in supplied samples; this does not establish absence.',trace,followup_count:0};
- const model=resolveModel(config.model,'planning');
+ let model:string|undefined;
+ try{model=resolveModel(config.model,'planning');}catch{/* Invalid deployment registry: keep initial observations and recommend review. */}
  if(!model)return fail('unavailable','Inspection model is not configured; initial observations are retained.');
  const deadline=Date.now()+35000;
  const signal=()=>{const timeout=AbortSignal.timeout(Math.max(1,Math.min(10000,deadline-Date.now())));return deps?.signal?AbortSignal.any([deps.signal,timeout]):timeout};

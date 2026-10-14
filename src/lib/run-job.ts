@@ -4,7 +4,7 @@ import {analyzeMedia} from './media-analysis';
 import {Actor,Job,newJob,saveJob} from './jobs';
 import {store} from './store';
 import {defaultInspection,type InspectionTool} from './inspection-config';
-import {executeInspectionTool,inspectAutonomously,type InspectionResult} from './autonomous-inspection';
+import {checkToolArgs,executeInspectionTool,inspectAutonomously,type InspectionResult} from './autonomous-inspection';
 import type {PipelineContext} from './pipeline-events';
 import {withUsageScope} from './usage-ledger';
 import {randomUUID} from 'node:crypto';
@@ -20,7 +20,7 @@ async function runMeteredJob(orgId:string,actor:Actor,source:Job['source'],input
   const inspectionConfig=settings.inspection??defaultInspection;
   const enhanced=toolRequest?false:input.enhanced??inspectionConfig.enabled;
   if(enhanced&&input.classify!==true)throw new MediaError('Enhanced inspection requires explicit classify:true consent');
-  if(toolRequest&&!inspectionConfig.tools.includes(toolRequest.name))throw new MediaError('Inspection tool disabled',403);
+  if(toolRequest)checkToolArgs(toolRequest.name,toolRequest.args,input,inspectionConfig);
   if(toolRequest?.name==='assess_scene'&&input.classify!==true)throw new MediaError('AI assessment requires explicit classify:true consent');
   if(!await consume(orgId,input.frames.length))throw new MediaError('Monthly image quota reached',429);
   const job={...newJob(orgId,actor,source,input.frames.length),usageRunId},start=Date.now();await saveJob(job);

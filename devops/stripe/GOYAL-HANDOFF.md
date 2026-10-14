@@ -40,8 +40,8 @@
   counters currently remain separate from this AI ledger. `usage_run_id` is
   returned for successful jobs; both completed and failed job records retain
   `usageRunId` for correlation.
-- Anonymous public demo AI is bounded by publicBudget but is NOT assigned to
-  customer billing scopes. Add separate operator cost accounting for that path.
+- Anonymous public demo AI (initial call, each planner call and each follow-up)
+  is bounded by publicBudget but is NOT assigned to customer billing scopes. Add separate operator cost accounting for that path.
 - Add aggregate usage reporting UI/API; ledger records are not currently shown
   in the billing console. No estimated dollar costs are presented as actual.
 - Confirm model/region/cache pricing and version credit conversion weights;

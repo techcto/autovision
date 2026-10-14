@@ -9,7 +9,9 @@ import {approvedModels,visionLenses} from '@/lib/vision-lenses';
 export async function GET(req:NextRequest){
  const s=await operator(req);if(!s)return NextResponse.json({error:'unauthorized'},{status:401});
  const settings=await store.settings(s.orgId);
- return NextResponse.json({...settings,inspection:settings.inspection??defaultInspection,inspectionModels:approvedModels().map(({modelId,...m})=>({...m,model_id:modelId})),lenses:visionLenses,inspectionModelAvailable:approvedModels().some(m=>m.skills.includes('planning')),objectDetection:settings.objectDetection??{labels:enabledAiLabels()},catalog:objectGroups,presets:detectionPresets,canEdit:['root','admin'].includes(s.role)},{headers:{'Cache-Control':'no-store'}});
+ let models:ReturnType<typeof approvedModels>=[];
+ try{models=approvedModels();}catch{/* Invalid deployment registry: show no approved models so the page still loads. */}
+ return NextResponse.json({...settings,inspection:settings.inspection??defaultInspection,inspectionModels:models.map(m=>({id:m.id,label:m.label,skills:m.skills})),lenses:visionLenses,inspectionModelAvailable:models.some(m=>m.skills.includes('planning')),objectDetection:settings.objectDetection??{labels:enabledAiLabels()},catalog:objectGroups,presets:detectionPresets,canEdit:['root','admin'].includes(s.role)},{headers:{'Cache-Control':'no-store'}});
 }
 export async function PUT(req:NextRequest){
  if(!hasAllowedOrigin(req))return NextResponse.json({error:'Invalid origin'},{status:403});
