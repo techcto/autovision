@@ -6,6 +6,7 @@ const {createHash}=require('node:crypto');
 const {chromium}=require('playwright');
 const base=process.env.AUTOVISION_TEST_URL||'http://localhost:8081';
 const clip=process.argv[2]||'intruder';
+const enhanced=process.env.AUTOVISION_RECORD_INSPECTION==='true';
 if(!['intruder','dognight','package','backyardintruder'].includes(clip))throw Error('Unknown demo clip');
 const inputPath=`public/${clip}.mp4`,outputPath=`public/demo/${clip}-analysis.json`;
 if(!['localhost','127.0.0.1'].includes(new URL(base).hostname))throw Error('Localhost only');
@@ -30,17 +31,18 @@ async function main(){
    return exports.sampleUpload(new File([await response.blob()],clip+'.mp4',{type:'video/mp4'}),()=>{});
   },{sampler,clip});
   console.log('Sampled '+framesInput.length+' frames; submitting to localhost analysis');
-  const data={frames:framesInput,classify:true};
+  const data={frames:framesInput,classify:true,enhanced};
   if(clip!=='intruder')data.detection_labels=clip==='dognight'?['dog','person']:clip==='package'?['package','person']:['person'];
   const r=await page.request.post(base+'/api/demo/analyze',{headers:{Origin:base},data,timeout:180000}),result=await r.json();
   if(!r.ok())throw Error('Analysis failed: '+JSON.stringify(result));
   if(result.classification?.status!=='complete')throw Error('AI grounding did not complete: '+result.classification?.status);
+  if(enhanced&&!['complete','needs_review','not_triggered','budget_exhausted'].includes(result.inspection?.status))throw Error('Inspection unavailable: '+result.inspection?.status);
   const frames=result.frames.map(f=>({at_ms:f.at_ms,preview:f.preview,observations:f.observations,detections:f.detections.map(d=>({...d,source:d.source||'opencv'}))}));
   if(!frames.some(f=>f.detections.length))throw Error('No detection boxes returned; do not fabricate boxes');
-  const record={source:`/${clip}.mp4`,sha256:createHash('sha256').update(fs.readFileSync(inputPath)).digest('hex'),recordedAt:new Date().toISOString(),frames,classification:result.classification,engine:result.engine,engine_version:result.engine_version,detector_version:result.detector_version,metrics:result.metrics,observations:result.observations};
+  const record={source:`/${clip}.mp4`,sha256:createHash('sha256').update(fs.readFileSync(inputPath)).digest('hex'),recordedAt:new Date().toISOString(),frames,classification:result.classification,engine:result.engine,engine_version:result.engine_version,detector_version:result.detector_version,metrics:result.metrics,observations:result.observations,...(enhanced?{inspection:result.inspection}:{})};
   fs.mkdirSync('public/demo',{recursive:true});
   fs.writeFileSync(outputPath,JSON.stringify(record,null,2)+'\n');
-  fs.writeFileSync(`public/demo/${clip}-poster.jpg`,Buffer.from(frames[0].preview,'base64'));
+  if(process.env.AUTOVISION_KEEP_POSTER!=='true')fs.writeFileSync(`public/demo/${clip}-poster.jpg`,Buffer.from(frames[0].preview,'base64'));
   console.log(JSON.stringify({clip,frames:frames.length,boxes:frames.reduce((n,f)=>n+f.detections.length,0),classification:result.classification.status,engine:result.engine,output:outputPath}));
  }finally{await browser.close();}
 }

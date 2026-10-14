@@ -1,7 +1,7 @@
 {
   "source": "/backyardintruder.mp4",
   "sha256": "4cfa551ffbc2dbfeddf30a88bbc3f18881bc64a5bf9f57db4642d20449aa0b08",
-  "recordedAt": "2026-10-10T23:43:55.923Z",
+  "recordedAt": "2026-10-14T13:02:41.281Z",
   "frames": [
     {
       "at_ms": 0,
@@ -11,37 +11,19 @@
           "type": "person",
           "value": 1,
           "detected": true
-        },
-        {
-          "type": "person",
-          "value": 1,
-          "detected": true,
-          "source": "bedrock",
-          "advisory": true
         }
       ],
       "detections": [
         {
           "label": "person",
-          "score": 2.417,
+          "score": 0.921,
           "box": {
-            "x": 0.3765625,
-            "y": 0.18333333333333332,
-            "width": 0.1703125,
-            "height": 0.6027777777777777
+            "x": 0.4144450470805168,
+            "y": 0.24008847342597114,
+            "width": 0.10263322591781616,
+            "height": 0.4720379723442925
           },
           "source": "opencv"
-        },
-        {
-          "label": "person",
-          "source": "bedrock",
-          "advisory": true,
-          "box": {
-            "x": 0.409,
-            "y": 0.24,
-            "width": 0.111,
-            "height": 0.45
-          }
         }
       ]
     },
@@ -63,12 +45,12 @@
       "detections": [
         {
           "label": "person",
-          "score": 1.686,
+          "score": 0.923,
           "box": {
-            "x": 0.35625,
-            "y": 0.1361111111111111,
-            "width": 0.2125,
-            "height": 0.7555555555555555
+            "x": 0.39854042083024976,
+            "y": 0.22252803378634983,
+            "width": 0.12654366493225097,
+            "height": 0.5712881300184461
           },
           "source": "opencv"
         }
@@ -92,12 +74,12 @@
       "detections": [
         {
           "label": "person",
-          "score": 1.436,
+          "score": 0.924,
           "box": {
-            "x": 0.3421875,
-            "y": 0.15833333333333333,
-            "width": 0.21875,
-            "height": 0.7777777777777778
+            "x": 0.3801408536732197,
+            "y": 0.2412300878100925,
+            "width": 0.1371174693107605,
+            "height": 0.5599818759494357
           },
           "source": "opencv"
         }
@@ -109,8 +91,8 @@
       "observations": [
         {
           "type": "person",
-          "value": 0,
-          "detected": false
+          "value": 1,
+          "detected": true
         },
         {
           "type": "motion",
@@ -118,7 +100,19 @@
           "detected": true
         }
       ],
-      "detections": []
+      "detections": [
+        {
+          "label": "person",
+          "score": 0.916,
+          "box": {
+            "x": 0.4198007583618164,
+            "y": 0.23569716082678902,
+            "width": 0.13764342069625854,
+            "height": 0.5286562601725261
+          },
+          "source": "opencv"
+        }
+      ]
     },
     {
       "at_ms": 3646,
@@ -138,12 +132,12 @@
       "detections": [
         {
           "label": "person",
-          "score": 0.323,
+          "score": 0.904,
           "box": {
-            "x": 0.3375,
-            "y": 0.18333333333333332,
-            "width": 0.165625,
-            "height": 0.5888888888888889
+            "x": 0.3787252277135849,
+            "y": 0.22889137003156873,
+            "width": 0.08758997917175293,
+            "height": 0.5548606448703342
           },
           "source": "opencv"
         }
@@ -155,33 +149,26 @@
       "observations": [
         {
           "type": "person",
-          "value": 0,
-          "detected": false
+          "value": 1,
+          "detected": true
         },
         {
           "type": "motion",
           "value": 0.16322916666666668,
           "detected": true
-        },
-        {
-          "type": "person",
-          "value": 1,
-          "detected": true,
-          "source": "bedrock",
-          "advisory": true
         }
       ],
       "detections": [
         {
           "label": "person",
-          "source": "bedrock",
-          "advisory": true,
+          "score": 0.911,
           "box": {
-            "x": 0.473,
-            "y": 0.265,
-            "width": 0.227,
-            "height": 0.535
-          }
+            "x": 0.47473214417695997,
+            "y": 0.2700197484758165,
+            "width": 0.2421710968017578,
+            "height": 0.5660833570692274
+          },
+          "source": "opencv"
         }
       ]
     },
@@ -191,8 +178,8 @@
       "observations": [
         {
           "type": "person",
-          "value": 0,
-          "detected": false
+          "value": 1,
+          "detected": true
         },
         {
           "type": "motion",
@@ -200,7 +187,19 @@
           "detected": true
         }
       ],
-      "detections": []
+      "detections": [
+        {
+          "label": "person",
+          "score": 0.899,
+          "box": {
+            "x": 0.5714733600616455,
+            "y": 0.22897236082288955,
+            "width": 0.18669307231903076,
+            "height": 0.6836520724826389
+          },
+          "source": "opencv"
+        }
+      ]
     },
     {
       "at_ms": 6381,
@@ -220,12 +219,12 @@
       "detections": [
         {
           "label": "person",
-          "score": 1.729,
+          "score": 0.932,
           "box": {
-            "x": 0.4359375,
-            "y": 0.10555555555555556,
-            "width": 0.2421875,
-            "height": 0.8611111111111112
+            "x": 0.4857963740825653,
+            "y": 0.20836665365431045,
+            "width": 0.14348325729370118,
+            "height": 0.6476119147406684
           },
           "source": "opencv"
         }
@@ -237,8 +236,8 @@
       "observations": [
         {
           "type": "person",
-          "value": 0,
-          "detected": false
+          "value": 1,
+          "detected": true
         },
         {
           "type": "motion",
@@ -246,7 +245,19 @@
           "detected": true
         }
       ],
-      "detections": []
+      "detections": [
+        {
+          "label": "person",
+          "score": 0.896,
+          "box": {
+            "x": 0.35187429189682007,
+            "y": 0.2739114072587755,
+            "width": 0.1079365611076355,
+            "height": 0.4760470920138889
+          },
+          "source": "opencv"
+        }
+      ]
     },
     {
       "at_ms": 8204,
@@ -254,8 +265,8 @@
       "observations": [
         {
           "type": "person",
-          "value": 0,
-          "detected": false
+          "value": 1,
+          "detected": true
         },
         {
           "type": "motion",
@@ -263,7 +274,19 @@
           "detected": true
         }
       ],
-      "detections": []
+      "detections": [
+        {
+          "label": "person",
+          "score": 0.889,
+          "box": {
+            "x": 0.36479063183069227,
+            "y": 0.2998779535293579,
+            "width": 0.12153819799423218,
+            "height": 0.4612865024142795
+          },
+          "source": "opencv"
+        }
+      ]
     },
     {
       "at_ms": 9115,
@@ -271,8 +294,8 @@
       "observations": [
         {
           "type": "person",
-          "value": 0,
-          "detected": false
+          "value": 2,
+          "detected": true
         },
         {
           "type": "motion",
@@ -280,7 +303,30 @@
           "detected": true
         }
       ],
-      "detections": []
+      "detections": [
+        {
+          "label": "person",
+          "score": 0.896,
+          "box": {
+            "x": 0.4065639913082123,
+            "y": 0.31281327406565346,
+            "width": 0.13515062332153321,
+            "height": 0.5854652828640408
+          },
+          "source": "opencv"
+        },
+        {
+          "label": "person",
+          "score": 0.667,
+          "box": {
+            "x": 0.26479035913944243,
+            "y": 0.43529708650377064,
+            "width": 0.09365713000297546,
+            "height": 0.3411802715725369
+          },
+          "source": "opencv"
+        }
+      ]
     },
     {
       "at_ms": 9977,
@@ -288,33 +334,26 @@
       "observations": [
         {
           "type": "person",
-          "value": 0,
-          "detected": false
+          "value": 1,
+          "detected": true
         },
         {
           "type": "motion",
           "value": 0.24005208333333333,
           "detected": true
-        },
-        {
-          "type": "person",
-          "value": 1,
-          "detected": true,
-          "source": "bedrock",
-          "advisory": true
         }
       ],
       "detections": [
         {
           "label": "person",
-          "source": "bedrock",
-          "advisory": true,
+          "score": 0.919,
           "box": {
-            "x": 0.401,
-            "y": 0.165,
-            "width": 0.202,
-            "height": 0.835
-          }
+            "x": 0.40357322096824644,
+            "y": 0.18213415145874023,
+            "width": 0.19582341909408568,
+            "height": 0.8131967332628038
+          },
+          "source": "opencv"
         }
       ]
     }
@@ -322,39 +361,205 @@
   "classification": {
     "status": "complete",
     "model": "us.amazon.nova-lite-v1:0",
-    "summary": "A man in a hoodie and jeans is seen walking in a backyard at night, interacting with a wooden fence and a ball on the grass.",
+    "summary": "A man is seen walking in a backyard at night, initially holding a ball, then opening a gate, and finally walking away from the gate.",
     "checked_frames": [
       0,
       5,
       11
     ],
-    "labels": [
-      "person"
-    ]
+    "labels": []
   },
-  "engine": "opencv5-motion+legacy-hog",
+  "engine": "opencv5-motion+yolox",
   "engine_version": "5.0.0",
-  "detector_version": "opencv4-hog-4.13.0",
+  "detector_version": "yolox-opencv-zoo-47534e27c9851bb1128ccc0102f1145e27f23f98-sha256-c5c2d13e59ae883e6af3b45daea64af4833a4951c92d116ec270d9ddbe998063",
   "metrics": {
-    "latency_ms": 759.538
+    "latency_ms": 1510.125
   },
   "observations": [
     {
       "type": "person",
-      "value": 1,
+      "value": 2,
       "detected": true
     },
     {
       "type": "motion",
       "value": 0.36571180555555555,
       "detected": true
-    },
-    {
-      "type": "person",
-      "value": 1,
-      "detected": true,
-      "source": "bedrock",
-      "advisory": true
     }
-  ]
+  ],
+  "inspection": {
+    "status": "complete",
+    "review_recommended": true,
+    "reason": "The visual measurements show consistent detection of a person across multiple frames, but the detection scores vary and the quality of the frames is low. A human review is recommended to assess the reliability of the detections and the quality of the visual evidence.",
+    "trace": [
+      {
+        "step": 0,
+        "tool": "inspect_region",
+        "status": "complete",
+        "duration_ms": 768,
+        "input": {
+          "frame_index": 0,
+          "box": {
+            "x": 0.4144450470805168,
+            "y": 0.24008847342597114,
+            "width": 0.10263322591781616,
+            "height": 0.4720379723442925
+          },
+          "padding": 0.15
+        },
+        "output": {
+          "operation": "inspect_region",
+          "coordinate_space": "original_image",
+          "preview_space": "transformed_image",
+          "result": {
+            "frames": [
+              {
+                "at_ms": 0,
+                "observations": [
+                  {
+                    "type": "person",
+                    "value": 1,
+                    "detected": true
+                  }
+                ],
+                "detections": [
+                  {
+                    "label": "person",
+                    "score": 0.917,
+                    "box": {
+                      "x": 0.41267073904164137,
+                      "y": 0.238422840717766,
+                      "width": 0.10316684987396003,
+                      "height": 0.48427750375535755
+                    }
+                  }
+                ],
+                "preview": "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",
+                "quality": {
+                  "brightness": 62.55
+                }
+              }
+            ],
+            "observations": [
+              {
+                "type": "person",
+                "value": 1,
+                "detected": true
+              },
+              {
+                "type": "motion",
+                "value": 0,
+                "detected": false
+              }
+            ],
+            "engine": "opencv5-motion+yolox",
+            "engine_version": "5.0.0",
+            "detector_version": "yolox-opencv-zoo-47534e27c9851bb1128ccc0102f1145e27f23f98-sha256-c5c2d13e59ae883e6af3b45daea64af4833a4951c92d116ec270d9ddbe998063",
+            "metrics": {
+              "latency_ms": 116.016
+            },
+            "limitations": [
+              "COCO-80 object detector, not a smoke, fire or safety classifier.",
+              "Detector scores are not calibrated probabilities.",
+              "Sampled frames may miss events between samples."
+            ]
+          },
+          "limitations": [
+            "Enhancement does not recover missing detail; detector scores are not calibrated probabilities."
+          ],
+          "source_frame_index": 0,
+          "source_at_ms": 0
+        }
+      },
+      {
+        "step": 1,
+        "tool": "inspect_region",
+        "status": "complete",
+        "duration_ms": 973,
+        "input": {
+          "frame_index": 9,
+          "box": {
+            "x": 0.36479063183069227,
+            "y": 0.2998779535293579,
+            "width": 0.12153819799423218,
+            "height": 0.4612865024142795
+          },
+          "padding": 0.15
+        },
+        "output": {
+          "operation": "inspect_region",
+          "coordinate_space": "original_image",
+          "preview_space": "transformed_image",
+          "result": {
+            "frames": [
+              {
+                "at_ms": 0,
+                "observations": [
+                  {
+                    "type": "person",
+                    "value": 1,
+                    "detected": true
+                  }
+                ],
+                "detections": [
+                  {
+                    "label": "person",
+                    "score": 0.792,
+                    "box": {
+                      "x": 0.37002327790251,
+                      "y": 0.312806359368066,
+                      "width": 0.1183978283777833,
+                      "height": 0.4409658398893144
+                    }
+                  }
+                ],
+                "preview": "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",
+                "quality": {
+                  "brightness": 48.19
+                }
+              }
+            ],
+            "observations": [
+              {
+                "type": "person",
+                "value": 1,
+                "detected": true
+              },
+              {
+                "type": "motion",
+                "value": 0,
+                "detected": false
+              }
+            ],
+            "engine": "opencv5-motion+yolox",
+            "engine_version": "5.0.0",
+            "detector_version": "yolox-opencv-zoo-47534e27c9851bb1128ccc0102f1145e27f23f98-sha256-c5c2d13e59ae883e6af3b45daea64af4833a4951c92d116ec270d9ddbe998063",
+            "metrics": {
+              "latency_ms": 123.436
+            },
+            "limitations": [
+              "COCO-80 object detector, not a smoke, fire or safety classifier.",
+              "Detector scores are not calibrated probabilities.",
+              "Sampled frames may miss events between samples."
+            ]
+          },
+          "limitations": [
+            "Enhancement does not recover missing detail; detector scores are not calibrated probabilities."
+          ],
+          "source_frame_index": 9,
+          "source_at_ms": 8204
+        }
+      },
+      {
+        "step": 2,
+        "tool": "finish",
+        "status": "complete",
+        "duration_ms": 983,
+        "reason": "The visual measurements show consistent detection of a person across multiple frames, but the detection scores vary and the quality of the frames is low. A human review is recommended to assess the reliability of the detections and the quality of the visual evidence."
+      }
+    ],
+    "model": "us.amazon.nova-lite-v1:0",
+    "followup_count": 2,
+    "images_sent_to_bedrock": false
+  }
 }

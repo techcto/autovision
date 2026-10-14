@@ -1,7 +1,7 @@
 import {ObjectLabel,validateObjectLabels} from './detection-catalog';
 export const MAX_BODY = 4_000_000;
 export type Frame = {image: string; at_ms: number};
-export type AnalysisInput = {frames: Frame[]; classify?: boolean; detection_labels?: ObjectLabel[]};
+export type AnalysisInput = {frames: Frame[]; classify?: boolean; enhanced?:boolean; detection_labels?: ObjectLabel[]};
 export class MediaError extends Error {
   constructor(message: string, public status = 400) {super(message);}
 }
@@ -11,6 +11,8 @@ export function validateAnalysis(value: unknown): AnalysisInput {
   const frames = v.frames ?? (typeof v.image === 'string' ? [{image: v.image, at_ms: 0}] : null);
   if (!Array.isArray(frames) || frames.length < 1 || frames.length > 12) throw new MediaError('Supply 1–12 frames');
   if (v.classify !== undefined && typeof v.classify !== 'boolean') throw new MediaError('classify must be boolean');
+  if (v.enhanced !== undefined && typeof v.enhanced !== 'boolean') throw new MediaError('enhanced must be boolean');
+  if(v.enhanced===true&&v.classify!==true)throw new MediaError('Enhanced inspection requires explicit classify:true consent');
   let last = -1, size = 0;
   for (const frame of frames) {
     if (!frame || typeof frame !== 'object' || typeof frame.image !== 'string' || !Number.isFinite(frame.at_ms) || frame.at_ms <= last || frame.at_ms > 30_000) throw new MediaError('Frames require ordered timestamps within 30 seconds');
@@ -24,7 +26,7 @@ export function validateAnalysis(value: unknown): AnalysisInput {
   if (v.detection_labels !== undefined) {
     try {labels=validateObjectLabels(v.detection_labels);} catch {throw new MediaError('Invalid detection_labels; choose labels from the catalog');}
   }
-  return {frames, classify: v.classify === true, ...(labels===undefined?{}:{detection_labels:labels})};
+  return {frames, classify: v.classify === true, ...(v.enhanced===undefined?{}:{enhanced:v.enhanced as boolean}), ...(labels===undefined?{}:{detection_labels:labels})};
 }
 export async function readBoundedJson(request: Request) {
   if (!request.headers.get('content-type')?.startsWith('application/json')) throw new MediaError('Use application/json', 415);

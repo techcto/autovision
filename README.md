@@ -177,7 +177,7 @@ Review each resource's deletion/retention policy before removing a stack. Export
 ## Scope And Safety
 
 - OpenCV 5 motion and YOLOX object detection and optional Nova Lite package grounding are implemented and tested locally. Smoke/fire grounding is opt-in and advisory; no trained or validated smoke/fire detector, COOL acceleration, or direct Ring integration is claimed.
-- All image processing and object detection use OpenCV 5.0.0. Optional agentic-loop awards are not claimed.
+- All image processing and object detection use OpenCV 5.0.0. Bounded autonomous inspection is implemented locally; live Bedrock and labeled-clip evaluation are still required before claiming evaluated agentic performance or award qualification.
 - Sensor thresholds are demonstration rules, not certified alarms or life-safety equipment.
 - Optional Bedrock failures do not prevent deterministic incident persistence.
 - AgentCore runtime integration is not implemented in this repository.
@@ -253,9 +253,117 @@ Call `POST /api/v1/faces` with an AutoVision bearer API key and the same `image`
 
 Verification includes authenticated-route/no-job tests, Python tests with synthetic model doubles, and real YuNet/SFace inference on an OpenCV sample: OpenCV 5.0.0 detected one face and returned a 128-dimensional embedding. This smoke check is not household accuracy or liveness validation; calibration and production deployment remain separate checks. Run `npm run test:web`, `npm run lint`, and the vision container's `python -m unittest discover -s src/vision -p 'test_*.py'` before release.
 
+## Build autonomous applications with AutoVision
+
+AutoVision provides a bounded **perception → inspection tool → evaluation** loop. Your application owns the next action. A home-security app, robot inspection workflow, or inventory application can submit its existing images, let a Bedrock planner choose a follow-up based on OpenCV measurements, and consume a structured review recommendation without giving the planner arbitrary device or network access.
+
+```text
+Your app supplies images / sampled video
+  → OpenCV 5 YOLOX objects + motion + brightness
+  → Bedrock chooses a validated inspection tool
+  → OpenCV crop/re-detection or low-light enhancement/re-detection
+    (or focused advisory scene assessment)
+  → actual tool evidence returns to Bedrock
+  → review recommendation + tool trace
+  → YOUR APP: human review, notification, or separately authorized action
+```
+
+This is an implemented runtime loop, not a claim that an AI coding assistant built the project autonomously. Live Bedrock demonstrations and representative labeled-clip evaluation are still required before claiming evaluated agentic performance or award qualification. COOL/Graviton acceleration remains a separate verification task.
+
+### Enable enhanced inspection through REST or MCP
+
+```bash
+curl "$AUTOVISION_URL/api/v1/analyze" \
+  -H "Authorization: Bearer $AUTOVISION_API_KEY" \
+  -H 'Content-Type: application/json' \
+  --data @request.json
+```
+
+`request.json` supplies actual bounded base64 JPEG/PNG bytes:
+
+```json
+{
+  "frames": [{"image": "BASE64_JPEG_BYTES", "at_ms": 0}],
+  "detection_labels": ["person", "dog", "cat", "package"],
+  "classify": true,
+  "enhanced": true
+}
+```
+
+- `enhanced:true` opts into inspection; `false` forces single-pass analysis. Omission inherits the organization default, initially disabled.
+- Enhanced analysis always requires explicit `classify:true` consent to delegate to Bedrock. Invalid combinations fail before quota consumption.
+- Existing MCP tools `analyze_image` and `analyze_video_frames` accept the same flag. `inspect_scene` opts into the central inspection loop. Individual MCP tools `inspect_region`, `enhance_low_light`, and `assess_scene` share its validated executor so external agents can compose their own loops. Standalone tools return `tool_complete` evidence, not downstream action decisions.
+- Organization Settings → Autonomous inspection controls person/dog/cat/package triggers, enabled tools, maximum follow-ups, crop padding, brightness threshold, and CLAHE strength. Planner, scene, package and activity lenses can select different deployment-approved model keys.
+- Pets are dog/cat YOLOX classes; package is advisory Bedrock grounding, not a dedicated OpenCV package detector. Low brightness can independently trigger the enhancement tool.
+
+### Streaming pipeline and homepage demonstrations
+
+Send `Accept: text/event-stream` to the same authenticated `POST /api/v1/analyze` endpoint for actual execution events instead of the final JSON-only response. SSE messages use `event: pipeline` and JSON data with `type`: `run.started`, `step.added`, `step.started`, `step.completed`, `step.failed`, `run.completed`, or `run.failed`. The Decider adds tool steps dynamically; each receives its actual returned evidence before the next decision. The terminal event contains the final result and job ID. Heartbeats keep the connection active; cancellation aborts outstanding inference where supported. Reconnecting starts a new run and can consume quota—there is no automatic resume or retry.
+
+The homepage's user-uploaded image/video demo uses this live streaming presentation. An explicit autonomous-inspection checkbox enables follow-up lenses only with AI consent. Anonymous runs and follow-ups share the deployment's bounded public-demo allowance and do not save private job history. Original video stays in the browser; only sampled frames are supplied. Prerecorded sample clips and the pipeline walkthrough replay cached, real reports without fresh inference charges. `/demo/pipeline` explains the captured run, including the crop miss and advisory-reason limitations.
+
+The UI displays concise decision summaries and observable tool inputs/results, never private model chain-of-thought. See [the captured real smoke trace](devops/testing/autonomous-inspection-live.json). OpenCV 5 → Nova-selected crop → Nova-selected scene assessment → review completed in the live smoke test. This establishes runtime integration, not labeled task accuracy; the recorded planner reason contains unsupported package uncertainty, explicitly noted in the report. Representative benchmark evaluation remains required.
+
+### Consume the recommendation in your own app
+
+The response keeps initial detections and adds an `inspection` object. The following is a **schema illustration**, not a measured example:
+
+```json
+{
+  "inspection": {
+    "status": "complete",
+    "review_recommended": true,
+    "reason": "Available sampled evidence remains inconclusive",
+    "followup_count": 1,
+    "trace": []
+  }
+}
+```
+
+Actual completed inspections include tool trace entries; inspect the recorded inputs, actual OpenCV outputs, timing, and completion reason in the API response or job detail page. Your application can use this integration pattern:
+
+```js
+const response = await fetch(`${baseUrl}/api/v1/analyze`, {
+  method: 'POST',
+  headers: {Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json'},
+  body: JSON.stringify({frames, classify: true, enhanced: true})
+});
+if (!response.ok) throw new Error(`AutoVision failed: ${response.status}`);
+const evidence = await response.json();
+const inspection = evidence.inspection;
+if (!inspection || inspection.review_recommended) {
+  // Your application's authenticated queue; not an AutoVision-provided function.
+  await createHumanReviewTask({jobId: evidence.job_id, evidence});
+}
+// Apply your own baseline policy regardless of the recommendation.
+// A false review flag is NOT permission to unlock, suppress alarms, or dismiss events.
+```
+
+For example, SmartDetector owns camera access, family preferences, notifications, and approvals. AutoVision does not fetch additional Ring frames, send SMS/email, maintain household face lists for this loop, control robots, or execute security actions. Other apps can build different action policies on the same evidence API.
+
+### Tools, costs, limits, and failure handling
+
+One central Decider calls `inspect_region`, `enhance_low_light`, and `assess_scene`, followed by `finish`. It must execute a follow-up before finishing and receives every tool result before its next choice. Lenses accumulate evidence rather than recursively launching agents. These are separate passes on original frames, not chained pixel transformations. Crop tools select existing detector boxes; CLAHE is contrast enhancement, not true night vision. Original-coordinate detections and transformed previews are distinguished.
+
+AI scene, package and activity lenses use focused prompts and can select distinct deployment-approved models. Operators configure `AUTOVISION_AI_MODELS_JSON`; see [the registry contract](AUTONOMOUS_INSPECTION.md). Independently verify region, model access, image/tool support, IAM permissions and cost. Discover supported/planned lenses with authenticated `GET /api/v1/lenses` or MCP `list_vision_lenses`. OCR, segmentation, tracking, pose and alternative detector adapters are planned, not executable today. Face measurements remain explicit separate API calls.
+
+There are at most two follow-ups and three planner calls within a 35-second inspection-loop budget, in addition to initial analysis. Each attempted follow-up after reservation consumes an additional image quota unit; extra Bedrock calls also incur deployment-side inference costs. Failures preserve initial detections and recommend human review. Unknown tools, invalid regions, missing models, unsupported OpenCV versions, quota exhaustion, and timeouts do not become silent negative detections.
+
+Status values include `not_requested`, `not_triggered`, `complete`, `needs_review`, `unavailable`, `quota_exhausted`, and `budget_exhausted`. `not_triggered` means no configured trigger was observed in supplied samples—not that the scene is safe or empty. Recommendations do not establish identity, intent, or danger. Images and tool results are treated as untrusted evidence. Customers retain control of downstream action and approval policies.
+
+Private jobs retain bounded sampled previews and traces under the existing seven-day retention and organization-scoped purge policy. Original video is not retained. Never put image bytes, biometric embeddings, or API credentials in application logs.
+
+See [the inspection contract and evaluation procedure](AUTONOMOUS_INSPECTION.md), [public API documentation](https://autovision.dev/api-reference), and [MCP guide](https://autovision.dev/docs/mcp). Repository changes must be released and deployed before the hosted service exposes them.
+
 ## OpenCV developer feedback
 
 Future consumers could use the stateless measurements for building-access or attendance workflows while owning their own enrollment, consent and business rules. Those are not current AutoVision features. Access/attendance decisions would need representative validation, anti-spoof/liveness controls, audit/correction and an alternative such as a badge or PIN; a similarity score alone is insufficient.
 
 The [friction log](FRICTION_LOG.md) records observed tasks, steps, expected/actual behavior, severity, workarounds and actionable suggestions. Include the sanitized log URL in the submission; recording it here does not submit it to Devpost automatically.
+
+# Stripe plan provisioning
+
+The existing paid plans and future usage meters can be prepared without keys.
+See [Stripe setup](devops/stripe/README.md) for offline preview, sandbox/live
+provisioning, and the remaining safeguards before enabling paid overages.
 

@@ -100,6 +100,7 @@
       "MinValue": 1,
       "MaxValue": 49999
     },
+    "AIModelRegistry": {"Type": "String", "Default": "", "Description": "Optional operator-approved AI model registry JSON. Verify image/tool support, region, cost and IAM separately; does not provision model access."},
     "BedrockModelId": {
       "Type": "String",
       "Default": "",
@@ -628,6 +629,10 @@
                 }
               },
               {
+                "Name": "AUTOVISION_AI_MODELS_JSON",
+                "Value": {"Ref": "AIModelRegistry"}
+              },
+              {
                 "Name": "AUTOVISION_VISION_MODEL_ID",
                 "Value": {
                   "Fn::If": [
@@ -888,6 +893,10 @@
               {
                 "Name": "AUTOVISION_NOTIFICATION_MODE",
                 "Value": "aws"
+              },
+              {
+                "Name": "AUTOVISION_AI_MODELS_JSON",
+                "Value": {"Ref": "AIModelRegistry"}
               },
               {
                 "Name": "AUTOVISION_VISION_MODEL_ID",

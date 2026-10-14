@@ -1,8 +1,9 @@
 'use client';
 import {useEffect,useState} from 'react';
+import RecordedInspection from './recorded-inspection';
 type Detection={label:string;source?:string;box:{x:number;y:number;width:number;height:number}};
 type Sample={at_ms:number;preview:string;detections:Detection[]};
-type Recording={frames:Sample[];classification:{summary?:string;checked_frames?:number[]};engine:string;recordedAt:string};
+type Recording={frames:Sample[];classification:{summary?:string;checked_frames?:number[]};engine:string;recordedAt:string;inspection?:import('@/lib/autonomous-inspection').InspectionResult;observations?:unknown};
 export default function HeroVideoDemo({clip='intruder',title='Doorbell camera',description}:{clip?:'intruder'|'dognight'|'package'|'backyardintruder';title?:string;description?:string}){
  const [aspect,setAspect]=useState(16/9);
  const [audit,setAudit]=useState(false);
@@ -24,7 +25,7 @@ export default function HeroVideoDemo({clip='intruder',title='Doorbell camera',d
    <span role="status">{`Sample ${selected+1} of ${record.frames.length} · ${(sample!.at_ms/1000).toFixed(1)}s`}</span>
    <button type="button" className="av-button-secondary" disabled={selected===record.frames.length-1} onClick={()=>setSelected(selected+1)}>Next →</button>
   </div><div className="av-hero-demo-samples" aria-label="Analyzed video samples">{record.frames.map((f,i)=><button type="button" key={f.at_ms} onClick={()=>setSelected(i)} aria-pressed={selected===i} aria-label={`Show analyzed sample ${(f.at_ms/1000).toFixed(1)} seconds`}><img src={'data:image/jpeg;base64,'+f.preview} alt=""/><span>{(f.at_ms/1000).toFixed(1)}s</span></button>)}</div>
-  <p className="av-hero-demo-summary">{record.classification.summary}</p><p className="av-fine">Engine: {record.engine} · Analysis recorded {new Date(record.recordedAt).toLocaleDateString()}</p></div>}
+  <p className="av-hero-demo-summary">{record.classification.summary}</p><p className="av-fine">Engine: {record.engine} · Analysis recorded {new Date(record.recordedAt).toLocaleDateString()}</p>{record.inspection&&<RecordedInspection inspection={record.inspection} observations={record.observations}/>}</div>}
   {error&&<p role="alert">{error}</p>}
   <p className="av-fine">Precomputed AutoVision results on this supplied demo clip. Boxes appear only at sampled times, not continuous tracking. Dashed red: advisory AI grounding. Green: OpenCV detector output. No identity, intent or threat determination.</p>
  </section>;

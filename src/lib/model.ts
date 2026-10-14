@@ -12,6 +12,7 @@ export type AutoVisionUser={id:string;username:string;displayName:string;status:
 export type Settings={
   tenantId:string;
   objectDetection?:{labels:import('./detection-catalog').ObjectLabel[]};
+  inspection?:import('./inspection-config').InspectionConfig;
   detection:{warningPercent:number;criticalPercent:number;emergencyPercent:number;trafficMultiplier:number;distributedCrawlerCorrelation:boolean;applicationFailureDetection:boolean;heartbeatStaleSeconds:number};
   notifications:{whatsappEnabled:boolean;whatsappSenderId:string;emailEnabled:boolean;recipients:string};
   response:{allowRemoteRequests:boolean;dryRun:boolean;defaultTtlSeconds:number;maxTtlSeconds:number};

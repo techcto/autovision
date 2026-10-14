@@ -1,7 +1,7 @@
 {
   "source": "/dognight.mp4",
   "sha256": "c1adc3e25b7e567d4fd8f7ffd26910c3f8cc7708b96c60734458bbd26b5f9b0c",
-  "recordedAt": "2026-10-10T23:33:20.081Z",
+  "recordedAt": "2026-10-14T13:08:47.645Z",
   "frames": [
     {
       "at_ms": 0,
@@ -14,32 +14,11 @@
         },
         {
           "type": "dog",
-          "value": 1,
-          "detected": true,
-          "source": "bedrock",
-          "advisory": true
-        },
-        {
-          "type": "person",
           "value": 0,
-          "detected": false,
-          "source": "bedrock",
-          "advisory": true
+          "detected": false
         }
       ],
-      "detections": [
-        {
-          "label": "dog",
-          "source": "bedrock",
-          "advisory": true,
-          "box": {
-            "x": 0.085,
-            "y": 0.161,
-            "width": 0.097,
-            "height": 0.159
-          }
-        }
-      ]
+      "detections": []
     },
     {
       "at_ms": 912,
@@ -47,16 +26,33 @@
       "observations": [
         {
           "type": "person",
-          "value": 0,
-          "detected": false
+          "value": 1,
+          "detected": true
         },
         {
           "type": "motion",
           "value": 0.02765625,
           "detected": true
+        },
+        {
+          "type": "dog",
+          "value": 0,
+          "detected": false
         }
       ],
-      "detections": []
+      "detections": [
+        {
+          "label": "person",
+          "score": 0.63,
+          "box": {
+            "x": 0.2691145397722721,
+            "y": 0.19835337532891167,
+            "width": 0.13306499719619752,
+            "height": 0.30488594902886285
+          },
+          "source": "opencv"
+        }
+      ]
     },
     {
       "at_ms": 1823,
@@ -71,9 +67,26 @@
           "type": "motion",
           "value": 0.07286458333333333,
           "detected": true
+        },
+        {
+          "type": "dog",
+          "value": 1,
+          "detected": true
         }
       ],
-      "detections": []
+      "detections": [
+        {
+          "label": "dog",
+          "score": 0.831,
+          "box": {
+            "x": 0.3204241067171097,
+            "y": 0.322903921869066,
+            "width": 0.26816816329956056,
+            "height": 0.44586923387315536
+          },
+          "source": "opencv"
+        }
+      ]
     },
     {
       "at_ms": 2735,
@@ -88,9 +101,26 @@
           "type": "motion",
           "value": 0.07059027777777778,
           "detected": true
+        },
+        {
+          "type": "dog",
+          "value": 1,
+          "detected": true
         }
       ],
-      "detections": []
+      "detections": [
+        {
+          "label": "dog",
+          "score": 0.8,
+          "box": {
+            "x": 0.35152982771396635,
+            "y": 0.34837595886654327,
+            "width": 0.28971328735351565,
+            "height": 0.4154395633273654
+          },
+          "source": "opencv"
+        }
+      ]
     },
     {
       "at_ms": 3646,
@@ -105,9 +135,26 @@
           "type": "motion",
           "value": 0.056128472222222225,
           "detected": true
+        },
+        {
+          "type": "dog",
+          "value": 1,
+          "detected": true
         }
       ],
-      "detections": []
+      "detections": [
+        {
+          "label": "dog",
+          "score": 0.905,
+          "box": {
+            "x": 0.36010079085826874,
+            "y": 0.3555882347954644,
+            "width": 0.21549406051635742,
+            "height": 0.4382532755533854
+          },
+          "source": "opencv"
+        }
+      ]
     },
     {
       "at_ms": 4558,
@@ -126,29 +173,20 @@
         {
           "type": "dog",
           "value": 1,
-          "detected": true,
-          "source": "bedrock",
-          "advisory": true
-        },
-        {
-          "type": "person",
-          "value": 0,
-          "detected": false,
-          "source": "bedrock",
-          "advisory": true
+          "detected": true
         }
       ],
       "detections": [
         {
           "label": "dog",
-          "source": "bedrock",
-          "advisory": true,
+          "score": 0.904,
           "box": {
-            "x": 0.55,
-            "y": 0.419,
-            "width": 0.335,
-            "height": 0.324
-          }
+            "x": 0.5342927113175392,
+            "y": 0.43820781177944607,
+            "width": 0.35289154052734373,
+            "height": 0.37006454467773436
+          },
+          "source": "opencv"
         }
       ]
     },
@@ -165,9 +203,26 @@
           "type": "motion",
           "value": 0.05875,
           "detected": true
+        },
+        {
+          "type": "dog",
+          "value": 1,
+          "detected": true
         }
       ],
-      "detections": []
+      "detections": [
+        {
+          "label": "dog",
+          "score": 0.771,
+          "box": {
+            "x": 0.451365627348423,
+            "y": 0.4365983565648397,
+            "width": 0.3229289770126343,
+            "height": 0.29144465128580727
+          },
+          "source": "opencv"
+        }
+      ]
     },
     {
       "at_ms": 6381,
@@ -182,9 +237,26 @@
           "type": "motion",
           "value": 0.08076388888888889,
           "detected": true
+        },
+        {
+          "type": "dog",
+          "value": 1,
+          "detected": true
         }
       ],
-      "detections": []
+      "detections": [
+        {
+          "label": "dog",
+          "score": 0.916,
+          "box": {
+            "x": 0.34417892470955846,
+            "y": 0.3014468616909451,
+            "width": 0.21754882335662842,
+            "height": 0.5750099182128906
+          },
+          "source": "opencv"
+        }
+      ]
     },
     {
       "at_ms": 7292,
@@ -199,9 +271,26 @@
           "type": "motion",
           "value": 0.03986111111111111,
           "detected": true
+        },
+        {
+          "type": "dog",
+          "value": 1,
+          "detected": true
         }
       ],
-      "detections": []
+      "detections": [
+        {
+          "label": "dog",
+          "score": 0.921,
+          "box": {
+            "x": 0.3166129782795906,
+            "y": 0.26442903147803415,
+            "width": 0.23683247566223145,
+            "height": 0.6465988159179688
+          },
+          "source": "opencv"
+        }
+      ]
     },
     {
       "at_ms": 8204,
@@ -216,9 +305,26 @@
           "type": "motion",
           "value": 0.10024305555555556,
           "detected": true
+        },
+        {
+          "type": "dog",
+          "value": 1,
+          "detected": true
         }
       ],
-      "detections": []
+      "detections": [
+        {
+          "label": "dog",
+          "score": 0.909,
+          "box": {
+            "x": 0.3778332456946373,
+            "y": 0.2937353319591946,
+            "width": 0.2295984983444214,
+            "height": 0.7062646680408053
+          },
+          "source": "opencv"
+        }
+      ]
     },
     {
       "at_ms": 9115,
@@ -233,9 +339,26 @@
           "type": "motion",
           "value": 0.12567708333333333,
           "detected": true
+        },
+        {
+          "type": "dog",
+          "value": 1,
+          "detected": true
         }
       ],
-      "detections": []
+      "detections": [
+        {
+          "label": "dog",
+          "score": 0.898,
+          "box": {
+            "x": 0.37143404632806776,
+            "y": 0.4442598157458835,
+            "width": 0.3789273738861084,
+            "height": 0.5545289357503255
+          },
+          "source": "opencv"
+        }
+      ]
     },
     {
       "at_ms": 9977,
@@ -254,29 +377,20 @@
         {
           "type": "dog",
           "value": 1,
-          "detected": true,
-          "source": "bedrock",
-          "advisory": true
-        },
-        {
-          "type": "person",
-          "value": 0,
-          "detected": false,
-          "source": "bedrock",
-          "advisory": true
+          "detected": true
         }
       ],
       "detections": [
         {
           "label": "dog",
-          "source": "bedrock",
-          "advisory": true,
+          "score": 0.567,
           "box": {
-            "x": 0.679,
-            "y": 0.212,
-            "width": 0.121,
-            "height": 0.401
-          }
+            "x": 0.6688736915588379,
+            "y": 0.21768324110243056,
+            "width": 0.1332561731338501,
+            "height": 0.40403154161241317
+          },
+          "source": "opencv"
         }
       ]
     }
@@ -284,28 +398,25 @@
   "classification": {
     "status": "complete",
     "model": "us.amazon.nova-lite-v1:0",
-    "summary": "A dog is seen in a backyard at night, initially sitting and later walking with a ball in its mouth.",
+    "summary": "A dog is seen in a backyard at night, initially sitting and later walking with a tennis ball. The dog's movements and the presence of the ball are visible, but the exact breed and size of the dog cannot be determined.",
     "checked_frames": [
       0,
       5,
       11
     ],
-    "labels": [
-      "dog",
-      "person"
-    ]
+    "labels": []
   },
-  "engine": "opencv5-motion+legacy-hog",
+  "engine": "opencv5-motion+yolox",
   "engine_version": "5.0.0",
-  "detector_version": "opencv4-hog-4.13.0",
+  "detector_version": "yolox-opencv-zoo-47534e27c9851bb1128ccc0102f1145e27f23f98-sha256-c5c2d13e59ae883e6af3b45daea64af4833a4951c92d116ec270d9ddbe998063",
   "metrics": {
-    "latency_ms": 1666.714
+    "latency_ms": 1547.225
   },
   "observations": [
     {
       "type": "person",
-      "value": 0,
-      "detected": false
+      "value": 1,
+      "detected": true
     },
     {
       "type": "motion",
@@ -315,16 +426,23 @@
     {
       "type": "dog",
       "value": 1,
-      "detected": true,
-      "source": "bedrock",
-      "advisory": true
-    },
-    {
-      "type": "person",
-      "value": 0,
-      "detected": false,
-      "source": "bedrock",
-      "advisory": true
+      "detected": true
     }
-  ]
+  ],
+  "inspection": {
+    "status": "needs_review",
+    "review_recommended": true,
+    "reason": "Invalid frame index",
+    "trace": [
+      {
+        "step": 0,
+        "tool": "inspection",
+        "status": "failed",
+        "duration_ms": 0,
+        "reason": "Planner or tool unavailable; initial observations retained."
+      }
+    ],
+    "followup_count": 0,
+    "images_sent_to_bedrock": false
+  }
 }

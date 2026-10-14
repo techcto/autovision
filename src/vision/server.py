@@ -6,6 +6,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import cv2
 import numpy as np
+from inspection import inspect
 from faces import measure_faces, FaceModelsUnavailable
 from objects import detect_objects, detector_version, requested_labels, ObjectModelUnavailable
 
@@ -61,7 +62,7 @@ def analyze(v):
         preview = base64.b64encode(cv2.imencode('.jpg', cv2.resize(current, (max(1, round(w*scale)), max(1, round(h*scale)))), [cv2.IMWRITE_JPEG_QUALITY, 45])[1]).decode()
         if len(preview) > 24000:
             preview = base64.b64encode(cv2.imencode('.jpg', cv2.resize(current, (max(1, round(w*scale/2)), max(1, round(h*scale/2)))), [cv2.IMWRITE_JPEG_QUALITY, 35])[1]).decode()
-        results.append({'at_ms': at, 'observations': observations, 'detections': boxes, 'preview': preview})
+        results.append({'at_ms': at, 'observations': observations, 'detections': boxes, 'preview': preview, 'quality': {'brightness': round(float(gray.mean()), 2)}})
         previous, last_at = gray, at
     thumbnail = base64.b64encode(cv2.imencode('.jpg', cv2.resize(decode_image(frames[0]['image']), (160, 90)), [cv2.IMWRITE_JPEG_QUALITY, 50])[1]).decode()
     def peak(label):
@@ -113,7 +114,7 @@ class Handler(BaseHTTPRequestHandler):
         self.respond(200 if self.path == '/api/health' else 404, {'status': 'ok', 'engine_version': cv2.__version__})
 
     def do_POST(self):
-        if self.path not in ('/detect', '/analyze', '/faces'):
+        if self.path not in ('/detect', '/analyze', '/faces', '/inspect'):
             return self.respond(404, {'error': 'not found'})
         size = int(self.headers.get('Content-Length', '0'))
         if not 0 < size <= 4000000:
@@ -122,7 +123,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.respond(429, {'error': 'Vision service busy'})
         try:
             value = json.loads(self.rfile.read(size))
-            result = measure_faces(value, decode_image) if self.path == '/faces' else (analyze if self.path == '/analyze' else detect)(value)
+            result = inspect(value, decode_image, analyze) if self.path == '/inspect' else measure_faces(value, decode_image) if self.path == '/faces' else (analyze if self.path == '/analyze' else detect)(value)
             self.respond(200, result)
         except FaceModelsUnavailable:
             self.respond(503, {'error': 'Face measurement models unavailable'})

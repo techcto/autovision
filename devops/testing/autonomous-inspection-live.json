@@ -1,0 +1,45 @@
+{
+  "test_kind": "sanitized_projection_of_live_bedrock_opencv_smoke",
+  "recorded_at": "2026-10-14T12:42:40.117Z",
+  "fixture": "public/demo/backyardintruder-poster.jpg",
+  "frame_count": 1,
+  "engine_version": "5.0.0",
+  "detector_version": "yolox-opencv-zoo-47534e27c9851bb1128ccc0102f1145e27f23f98-sha256-c5c2d13e59ae883e6af3b45daea64af4833a4951c92d116ec270d9ddbe998063",
+  "model": "us.amazon.nova-lite-v1:0",
+  "initial_observations": {"person": 1, "package": 0},
+  "trace": [
+    {
+      "step": 0,
+      "tool": "inspect_region",
+      "status": "complete",
+      "duration_ms": 910,
+      "input": {"frame_index": 0, "box": {"x": 0.4165959894657135, "y": 0.23419763776991104, "width": 0.09841214418411255, "height": 0.473868645562066}, "padding": 0.15},
+      "measured_output": {"person": 0, "brightness": 62.16, "engine_version": "5.0.0", "vision_latency_ms": 97.238}
+    },
+    {
+      "step": 1,
+      "tool": "assess_scene",
+      "status": "complete",
+      "duration_ms": 1858,
+      "input": {"frame_index": 0, "focus": "scene"},
+      "measured_output": {"person": 1, "package": 0},
+      "advisory_summary": "A person is standing in a backyard at night, illuminated by a light. There is no visible package in this frame."
+    },
+    {
+      "step": 2,
+      "tool": "finish",
+      "status": "complete",
+      "duration_ms": 961,
+      "review_recommended": true,
+      "advisory_reason": "The initial detection of a person was not confirmed in the inspected region. The scene assessment did not find a package, but the advisory suggests a package might be present. Further inspection is needed to confirm the presence of a package."
+    }
+  ],
+  "evaluation": {
+    "runtime_loop_completed": true,
+    "followup_budget_respected": true,
+    "external_actions_performed": false,
+    "labeled_accuracy_measured": false,
+    "issues": ["Crop re-detection missed a person observed in the full image; initial evidence was preserved.", "The planner's package-uncertainty wording is not directly supported by the returned package detections. Reasons remain advisory and require evaluation."],
+    "limits": ["One supplied image, not a temporal video benchmark.", "This projection omits retained JPEG previews and nonessential result fields.", "Live model decisions may vary."]
+  }
+}

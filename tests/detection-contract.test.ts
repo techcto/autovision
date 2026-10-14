@@ -42,3 +42,21 @@ test('MCP tool results carry the same YOLOX detection shape',async()=>{
   assert.deepEqual((seen[0] as {detection_labels:string[]}).detection_labels,['car']);
  }finally{globalThis.fetch=original;}
 });
+test('individual MCP lenses share validated execution, persist evidence and never implicitly delegate crop to AI',async()=>{
+ const org=await store.createOrganization({name:'Lens MCP',ownerId:'root',orgType:'personal'}),key=await createKey(org.id,'lens-test');
+ const original=globalThis.fetch,seen:unknown[]=[];
+ try{
+  globalThis.fetch=(async(url,init)=>{
+   if(String(url).endsWith('/inspect')){const payload=JSON.parse(String(init?.body));assert.equal(payload.operation,'inspect_region');assert.deepEqual(payload.box,box.box);return Response.json({result:{engine_version:'5.0.0',frames:[{detections:[box]}]}})}
+   return vision(seen)(url,init);
+  }) as typeof fetch;
+  const call=async(name:string,args:unknown)=>{const r=await mcpRequest(new Request('https://example.test/mcp',{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json, text/event-stream',Authorization:'Bearer '+key.key},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/call',params:{name,arguments:args}})}));return r.json()};
+  const body=await call('inspect_region',{frames:[{image,at_ms:0}],frame_index:0,detection_index:0});
+  assert.equal(body.result.isError,undefined);const result=body.result.structuredContent;
+  assert.equal(result.inspection.status,'tool_complete');assert.equal(result.inspection.review_recommended,true);
+  assert.equal(result.privacy.sent_to_bedrock,false);assert.equal((seen[0] as {classify:boolean}).classify,false);
+  assert.equal((await getJob(org.id,result.job_id))?.result?.inspection.status,'tool_complete');
+  const invalid=await call('inspect_region',{frames:[{image,at_ms:0}],frame_index:0,detection_index:19});assert.equal(invalid.result.isError,true);
+  const discovery=await call('list_vision_lenses',{});assert.match(discovery.result.content[0].text,/planned/);
+ }finally{globalThis.fetch=original}
+});
