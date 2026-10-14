@@ -4,7 +4,7 @@ import {NextRequest} from 'next/server';
 import {createSession,sessionCookie} from '../src/lib/session';
 import {POST as createOrganization,GET as listOrganizations} from '../src/app/api/orgs/route';
 import {POST as switchOrganization} from '../src/app/api/orgs/active/route';
-test('SaaS root can create and switch organizations; private mode blocks both',async()=>{
+test('SaaS root can create, list and switch organizations; private mode blocks all three',async()=>{
  process.env.AUTOVISION_SESSION_SECRET='synthetic-organization-test-session-secret';
  process.env.AUTOVISION_DEPLOYMENT_MODE='saas';
  const token=await createSession({id:'root',username:'root',role:'root',orgId:'synthetic-root',expiresAt:Date.now()+60000},process.env.AUTOVISION_SESSION_SECRET);
@@ -16,4 +16,5 @@ test('SaaS root can create and switch organizations; private mode blocks both',a
  process.env.AUTOVISION_DEPLOYMENT_MODE='on-premise';
  assert.equal((await createOrganization(new NextRequest('http://localhost/api/orgs',{method:'POST',headers,body:'{}'}))).status,403);
  assert.equal((await switchOrganization(new NextRequest('http://localhost/api/orgs/active',{method:'POST',headers,body:'{}'}))).status,403);
+ assert.equal((await listOrganizations(new NextRequest('http://localhost/api/orgs',{headers}))).status,403);
 });

@@ -1,5 +1,6 @@
 import{NextRequest,NextResponse}from'next/server';import{randomUUID}from'node:crypto';import{operator}from'@/lib/operator';import{store}from'@/lib/store';import type{OrgMembership}from'@/lib/model';
 export async function GET(req:NextRequest){
+  if(process.env.AUTOVISION_DEPLOYMENT_MODE!=='saas')return NextResponse.json({error:'Organizations are disabled in private mode'},{status:403});
   const session=await operator(req);
   if(!session)return NextResponse.json({error:'unauthorized'},{status:401});
   if(session.role==='root'){const orgs=await store.organizations();return NextResponse.json(orgs.map(o=>({id:o.id,name:o.name,slug:o.slug,orgType:o.orgType,role:'root'})))}
