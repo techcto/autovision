@@ -63,6 +63,10 @@
       "Type": "String",
       "Default": ""
     },
+    "StripeImageOveragePriceId": {"Type": "String", "Default": "", "Description": "Metered per-image overage price on autovision_image_units_v1 (setup-plans.mjs). Must be from the same Stripe mode as StripeSecretKey."},
+    "StripeAIOveragePriceId": {"Type": "String", "Default": "", "Description": "Optional metered AI credit overage price on autovision_ai_credits_v1."},
+    "UsageExport": {"Type": "String", "Default": "disabled", "AllowedValues": ["disabled", "enabled"], "Description": "Enable opted-in overage and Stripe meter export (SaaS). Keep disabled until overage prices, credit weights and customer terms are approved and tested in Stripe test mode."},
+    "AICreditWeights": {"Type": "String", "Default": "", "Description": "Optional versioned AI credit weights JSON with included_credits per plan. Empty leaves AI usage unpriced and unbilled."},
     "SesFrom": {
       "Type": "String",
       "Default": ""
@@ -591,6 +595,30 @@
                 }
               },
               {
+                "Name": "STRIPE_IMAGE_OVERAGE_PRICE_ID",
+                "Value": {
+                  "Ref": "StripeImageOveragePriceId"
+                }
+              },
+              {
+                "Name": "STRIPE_AI_OVERAGE_PRICE_ID",
+                "Value": {
+                  "Ref": "StripeAIOveragePriceId"
+                }
+              },
+              {
+                "Name": "AUTOVISION_USAGE_EXPORT",
+                "Value": {
+                  "Ref": "UsageExport"
+                }
+              },
+              {
+                "Name": "AUTOVISION_AI_CREDIT_WEIGHTS_JSON",
+                "Value": {
+                  "Ref": "AICreditWeights"
+                }
+              },
+              {
                 "Name": "AUTOVISION_SES_FROM",
                 "Value": {
                   "Ref": "SesFrom"
@@ -848,6 +876,30 @@
                 "Name": "STRIPE_SCALE_PRICE_ID",
                 "Value": {
                   "Ref": "StripeScalePriceId"
+                }
+              },
+              {
+                "Name": "STRIPE_IMAGE_OVERAGE_PRICE_ID",
+                "Value": {
+                  "Ref": "StripeImageOveragePriceId"
+                }
+              },
+              {
+                "Name": "STRIPE_AI_OVERAGE_PRICE_ID",
+                "Value": {
+                  "Ref": "StripeAIOveragePriceId"
+                }
+              },
+              {
+                "Name": "AUTOVISION_USAGE_EXPORT",
+                "Value": {
+                  "Ref": "UsageExport"
+                }
+              },
+              {
+                "Name": "AUTOVISION_AI_CREDIT_WEIGHTS_JSON",
+                "Value": {
+                  "Ref": "AICreditWeights"
                 }
               },
               {
@@ -1129,6 +1181,30 @@
                 "Name": "STRIPE_SCALE_PRICE_ID",
                 "Value": {
                   "Ref": "StripeScalePriceId"
+                }
+              },
+              {
+                "Name": "STRIPE_IMAGE_OVERAGE_PRICE_ID",
+                "Value": {
+                  "Ref": "StripeImageOveragePriceId"
+                }
+              },
+              {
+                "Name": "STRIPE_AI_OVERAGE_PRICE_ID",
+                "Value": {
+                  "Ref": "StripeAIOveragePriceId"
+                }
+              },
+              {
+                "Name": "AUTOVISION_USAGE_EXPORT",
+                "Value": {
+                  "Ref": "UsageExport"
+                }
+              },
+              {
+                "Name": "AUTOVISION_AI_CREDIT_WEIGHTS_JSON",
+                "Value": {
+                  "Ref": "AICreditWeights"
                 }
               },
               {

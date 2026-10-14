@@ -24,25 +24,25 @@ STRIPE_STARTER_PRICE_ID and STRIPE_SCALE_PRICE_ID through deployment config.
 Configure STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET separately; never commit
 secrets. Verified subscription webhooks, not checkout redirects, activate plans.
 
-## Usage preparation—not active overage billing
+## Usage-based overage (off by default)
 
-- `autovision_image_units_v1`: supplied frames plus charged follow-up passes.
-  Do not count an entire video or API request as one image.
-- `autovision_ai_credits_v1`: reserved for model-weighted AI usage. Weights,
-  included AI allowances and overage prices are deliberately not defined yet.
+- `autovision_image_units_v1`: image units beyond the plan allowance only.
+- `autovision_ai_credits_v1`: model-weighted AI credits beyond the plan's
+  included credits, only when `AUTOVISION_AI_CREDIT_WEIGHTS_JSON` is set.
 - Meter payload: `stripe_customer_id`, integer `value`; aggregation: sum.
 
-The script creates no metered prices, changes no subscriptions, and emits no
-usage events. The current app still enforces calendar-month hard image quotas;
-Bedrock token accounting is now instrumented separately; Stripe usage delivery
-is not implemented. See [Goyal's handoff](GOYAL-HANDOFF.md) for coverage and tests.
+Metered overage prices are created only when you pass an amount in USD cents
+(decimals allowed). In test mode first:
 
-Before enabling overages: persist organization/job/step usage and actual model
-input/output tokens (including failed billable attempts); version AI credit
-weights; align allowances with subscription billing periods; implement an
-idempotent retryable usage outbox and reconciliation. Require customer opt-in,
-spend caps and alerts before attaching approved metered prices. Never silently
-upgrade existing subscribers to usage charges.
+```sh
+AUTOVISION_IMAGE_OVERAGE_UNIT_CENTS=0.5 node --env-file=.env devops/stripe/setup-plans.mjs --apply
+```
+
+Copy `STRIPE_IMAGE_OVERAGE_PRICE_ID` (and optionally `STRIPE_AI_OVERAGE_PRICE_ID`
+with `AUTOVISION_AI_CREDIT_UNIT_CENTS`) into deployment config, then set
+`AUTOVISION_USAGE_EXPORT=enabled`. Each organization still has to opt in on the
+billing page, which attaches the overage price to its subscription. See
+[Goyal's handoff](GOYAL-HANDOFF.md) for behavior, tests and what remains.
 
 Track OpenCV image passes/compute separately from Bedrock model/token usage.
 Premium models and agent loops can dominate variable costs; always-on compute,

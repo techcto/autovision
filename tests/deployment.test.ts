@@ -29,3 +29,16 @@ for (const name of ["autovision", "autovision-existing"]) {
     assert.ok(rules.filter(r => r.Type === "AWS::ElasticLoadBalancingV2::ListenerRule").some(r => JSON.stringify(r.Properties.Conditions).includes('"/mcp"')));
   });
 }
+
+for (const name of ["autovision", "autovision-existing"]) {
+  test(name + " keeps usage-based overage off by default and wires it to every service", () => {
+    const t = JSON.parse(readFileSync("devops/cloudformation/" + name + ".yaml", "utf8"));
+    assert.equal(t.Parameters.UsageExport.Default, "disabled");
+    assert.deepEqual(t.Parameters.UsageExport.AllowedValues, ["disabled", "enabled"]);
+    assert.equal(t.Parameters.StripeSecretKey.NoEcho, true);
+    for (const task of ["WebTask", "ApiTask", "WorkerTask"]) {
+      const env = t.Resources[task].Properties.ContainerDefinitions[0].Environment.map((e: {Name: string}) => e.Name);
+      for (const v of ["AUTOVISION_USAGE_EXPORT", "AUTOVISION_AI_CREDIT_WEIGHTS_JSON", "STRIPE_IMAGE_OVERAGE_PRICE_ID", "STRIPE_AI_OVERAGE_PRICE_ID", "STRIPE_SECRET_KEY"]) assert.ok(env.includes(v), task + " " + v);
+    }
+  });
+}

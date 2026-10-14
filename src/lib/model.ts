@@ -13,6 +13,8 @@ export type Settings={
   tenantId:string;
   objectDetection?:{labels:import('./detection-catalog').ObjectLabel[]};
   inspection?:import('./inspection-config').InspectionConfig;
+  // SaaS usage beyond the plan allowance; off unless an admin opts in. capUnits is the hard per-period image ceiling.
+  billing?:{overageEnabled:boolean;capUnits:number;alertPercents:number[];updatedAt:string};
   detection:{warningPercent:number;criticalPercent:number;emergencyPercent:number;trafficMultiplier:number;distributedCrawlerCorrelation:boolean;applicationFailureDetection:boolean;heartbeatStaleSeconds:number};
   notifications:{whatsappEnabled:boolean;whatsappSenderId:string;emailEnabled:boolean;recipients:string};
   response:{allowRemoteRequests:boolean;dryRun:boolean;defaultTtlSeconds:number;maxTtlSeconds:number};
@@ -20,7 +22,7 @@ export type Settings={
   updatedAt:string;
 };
 export type Product={id:string;name:string;description:string;stripePriceId:string;monthlyPrice:number;serverLimit:number;active:boolean};
-export type Subscription={id:string;orgId:string;productId:string;stripeCustomerId?:string;stripeSubscriptionId?:string;status:'trialing'|'active'|'past_due'|'canceled'|'unpaid';currentPeriodEnd?:string;updatedAt:string};
+export type Subscription={id:string;orgId:string;productId:string;stripeCustomerId?:string;stripeSubscriptionId?:string;status:'trialing'|'active'|'past_due'|'canceled'|'unpaid';currentPeriodStart?:string;currentPeriodEnd?:string;updatedAt:string};
 export function defaultSettings(tenantId:string):Settings{return{
   tenantId,
   detection:{warningPercent:2,criticalPercent:10,emergencyPercent:30,trafficMultiplier:5,distributedCrawlerCorrelation:true,applicationFailureDetection:true,heartbeatStaleSeconds:180},
