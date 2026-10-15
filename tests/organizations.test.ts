@@ -12,7 +12,7 @@ test('SaaS root can create, list and switch organizations; private mode blocks a
  const created=await createOrganization(new NextRequest('http://localhost/api/orgs',{method:'POST',headers,body:JSON.stringify({name:'Synthetic organization verification'})}));
  assert.equal(created.status,201);const org=await created.json();
  const listed=await listOrganizations(new NextRequest('http://localhost/api/orgs',{headers}));assert.ok((await listed.json()).some((o:{id:string})=>o.id===org.id));
- const switched=await switchOrganization(new NextRequest('http://localhost/api/orgs/active',{method:'POST',headers,body:JSON.stringify({orgId:org.id})}));assert.equal(switched.status,200);assert.ok(switched.headers.get('set-cookie'));
+ const switched=await switchOrganization(new NextRequest('http://localhost/api/orgs/active',{method:'POST',headers,body:JSON.stringify({orgId:org.id})}));assert.equal(switched.status,200);assert.match(switched.headers.get('set-cookie')??'',/SameSite=lax/i,'session must survive the redirect back from Stripe Checkout');
  process.env.AUTOVISION_DEPLOYMENT_MODE='on-premise';
  assert.equal((await createOrganization(new NextRequest('http://localhost/api/orgs',{method:'POST',headers,body:'{}'}))).status,403);
  assert.equal((await switchOrganization(new NextRequest('http://localhost/api/orgs/active',{method:'POST',headers,body:'{}'}))).status,403);

@@ -57,3 +57,38 @@ test('overage prices are metered on the meters, only created with amounts, and r
   assert.deepEqual(await setup(client, amounts), first);
   await assert.rejects(setup(client, { AUTOVISION_IMAGE_OVERAGE_UNIT_CENTS: 'abc' }), /Invalid/);
 });
+
+test('products get Checkout names, descriptions and one uploaded logo, updated in place on rerun', async () => {
+  const updates = [], uploads = [];
+  const products = new Map(), prices = [], meters = [];
+  const client = {
+    files: { create: async v => { uploads.push(v.purpose); return { id: 'file_1' }; } },
+    fileLinks: { create: async () => ({ url: 'https://files.stripe.com/links/logo' }) },
+    products: {
+      retrieve: async id => { if (!products.has(id)) throw Object.assign(new Error('missing'), { code: 'resource_missing' }); return products.get(id); },
+      create: async value => { const p = { ...value, active: true }; products.set(p.id, p); return p; },
+      update: async (id, value) => { const p = { ...products.get(id), ...value }; products.set(id, p); updates.push(id); return p; },
+    },
+    prices: {
+      list: async ({ lookup_keys }) => ({ data: prices.filter(p => lookup_keys.includes(p.lookup_key)) }),
+      create: async value => { const p = { ...value, id: `price_${prices.length}`, active: true,
+        recurring: { usage_type: 'licensed', ...value.recurring, interval_count: 1 } }; prices.push(p); return p; },
+    },
+    billing: { meters: {
+      list: async function* () { yield* meters; },
+      create: async value => { const m = { ...value, id: `mtr_${meters.length}`, status: 'active' }; meters.push(m); return m; },
+    } },
+  };
+  products.set('autovision_starter_v1', { id: 'autovision_starter_v1', name: 'AutoVision starter', active: true, images: [] });
+  await setup(client, {}, { data: Buffer.from('png'), name: 'logo.png' });
+  const starter = products.get('autovision_starter_v1');
+  assert.equal(starter.name, 'AutoVision Starter');
+  assert.match(starter.description, /10,000 images per month/);
+  assert.deepEqual(starter.images, ['https://files.stripe.com/links/logo']);
+  assert.equal(starter.metadata.logo_file, 'file_1');
+  assert.equal(products.get('autovision_scale_v1').name, 'AutoVision Scale');
+  assert.deepEqual(uploads, ['business_logo'], 'logo uploaded once and reused');
+  const before = updates.length;
+  await setup(client, {}, { data: Buffer.from('png'), name: 'logo.png' });
+  assert.equal(updates.length, before, 'no updates when display is already current');
+});

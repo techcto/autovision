@@ -16,7 +16,7 @@ Once keys are available, use a Stripe sandbox first:
 node --env-file=.env.local devops/stripe/setup-plans.mjs --apply
 ```
 
-Live keys additionally require `--live`. The script creates/reuses products,
+Live keys additionally require `--live`. Reruns also keep each product's Checkout display current (name, description and the AutoVision logo, uploaded once to Stripe); prices are never changed. The script creates/reuses products,
 monthly prices and sum meters using stable IDs, lookup keys and idempotency
 keys. Conflicting resources fail for manual review. Partial creation is not
 transactional: fix the problem and rerun. Copy returned price IDs into
