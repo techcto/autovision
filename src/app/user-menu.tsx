@@ -28,6 +28,7 @@ export default function UserMenu({id,displayName,role,saas=false}:{id:string;dis
       <Link className="user-menu-item" href={`/users/${id}`} role="menuitem" onClick={()=>setOpen(false)}>Profile</Link>
       <Link className="user-menu-item" href="/settings" role="menuitem" onClick={()=>setOpen(false)}>Settings</Link>
       {saas&&<Link className="user-menu-item" href="/users" role="menuitem" onClick={()=>setOpen(false)}>Users</Link>}
+      {role==='root'&&<Link className="user-menu-item" href="/admin" role="menuitem" onClick={()=>setOpen(false)}>Admin</Link>}
       <button className="user-menu-item user-menu-logout" role="menuitem" onClick={logout}>Log out</button>
     </div>}
   </div>;
