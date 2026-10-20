@@ -3,8 +3,8 @@ import {store} from './store';
 import {hashPassword} from './password';
 import {listJobs,saveJob,type Job} from './jobs';
 import type {MembershipRole,OrgType} from './model';
-// Synthetic data for `npm run dev` (in-memory store) and the local docker stack (DynamoDB local).
-// AWS deployments never set AUTOVISION_DYNAMODB_ENDPOINT, so they are never seeded.
+// Synthetic fixtures are restricted to private development with in-memory or local DynamoDB storage.
+// Production builds (including local production previews) and SaaS never seed.
 export const devFixturePassword='autovision-dev-fixture';
 type FixtureJob=[Job['status'],Job['source'],string,number,number,number];// status, source, run by (username or API key label), frames, duration ms, hours ago
 type Fixture={name:string;orgType:OrgType;contactEmail?:string;members:[string,string,MembershipRole][];jobs:FixtureJob[]};
@@ -14,7 +14,7 @@ const fixtures:Fixture[]=[
  {name:'Jordan Kim Studio',orgType:'personal',members:[['jordan.kim','Jordan Kim','admin']],jobs:[['failed','manual','jordan.kim',30,9100,48]]},
 ];
 function localDynamo(){try{return ['localhost','127.0.0.1','autovision-dynamodb'].includes(new URL(process.env.AUTOVISION_DYNAMODB_ENDPOINT??'').hostname)}catch{return false}}
-export const devFixturesEnabled=()=>process.env.AUTOVISION_DEPLOYMENT_MODE==='saas'&&(process.env.AUTOVISION_TABLE?localDynamo():process.env.NODE_ENV==='development');
+export const devFixturesEnabled=()=>process.env.NODE_ENV==='development'&&process.env.AUTOVISION_DEPLOYMENT_MODE==='on-premise'&&(!process.env.AUTOVISION_TABLE||localDynamo());
 export async function seedDevFixtures(){
  const g=globalThis as typeof globalThis&{autovisionDevFixtures?:boolean};
  if(!devFixturesEnabled()||g.autovisionDevFixtures)return false;

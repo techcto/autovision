@@ -367,3 +367,14 @@ The existing paid plans and future usage meters can be prepared without keys.
 See [Stripe setup](devops/stripe/README.md) for offline preview, sandbox/live
 provisioning, and the remaining safeguards before enabling paid overages.
 
+# Hackathon testing guide
+
+See [local setup, dedicated Bedrock credentials and live pipeline verification](docs/hackathon-local-testing.md).
+
+## Update a deployed version
+
+Run `bash cmd.sh cft-update VERSION --stack YOUR_EXISTING_STACK` from this repository.
+It prepares a CloudFormation change set, shows changes, asks for review/confirmation,
+executes the exact approved plan, and waits for completion. Existing parameters and
+credentials are preserved. See [update commands and offline tests](docs/cft-update.md).
+
