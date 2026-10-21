@@ -102,7 +102,7 @@ export async function reconcileUsage(orgId:string,client:MeterClient){
 }
 // Email once per threshold per quota period, against the plan allowance and, when opted in, the cap.
 export async function usageAlerts(orgId:string,send:Notifier=notifier()){
- if(!saas())return 0;
+ if(!saas()||(await quotaWindow(orgId)).quotaExempt)return 0;
  const settings=await store.settings(orgId),recipients=settings.notifications.recipients.split(',').map(v=>v.trim()).filter(Boolean);
  if(!settings.notifications.emailEnabled||!recipients.length)return 0;
  const usage=await usageFor(orgId),window=await quotaWindow(orgId),percents=settings.billing?.alertPercents??[80,100];let sent=0;

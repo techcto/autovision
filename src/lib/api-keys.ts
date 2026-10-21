@@ -8,13 +8,20 @@ export const planLimit=(productId?:string)=>productId==='scale'?100000:productId
 // One quota window for enforcement and billing: the stored Stripe period for paid plans, else the calendar month.
 // Overage raises the ceiling to the admin's cap only when export can bill it (opt-in, paid plan, export enabled).
 export async function quotaWindow(tenantId:string){const subscription=await store.activeSubscriptionForOrg(tenantId),month=new Date().toISOString().slice(0,7),saas=process.env.AUTOVISION_DEPLOYMENT_MODE==='saas',paid=!!subscription?.stripeCustomerId&&subscription.productId!=='dev',period=paid&&subscription?.currentPeriodStart?subscription.currentPeriodStart:null,allowance=planLimit(subscription?.productId);
+  // Only the canonical operator workspace is exempt, never a customer org selected by root.
+  const quotaExempt=tenantId===await store.singleDeploymentOrgId();
   const billing=saas&&paid&&process.env.AUTOVISION_USAGE_EXPORT==='enabled'?(await store.settings(tenantId)).billing:undefined,overage=!!billing?.overageEnabled;
-  return{key:period?'USAGE#P'+period:'USAGE#'+month,month,periodStart:period,allowance,overage,limit:!saas?1000000000:overage?Math.max(allowance,billing!.capUnits):allowance,plan:subscription?.productId??'dev'}}
+  return{quotaExempt,key:period?'USAGE#P'+period:'USAGE#'+month,month,periodStart:period,allowance,overage,limit:!saas?1000000000:overage?Math.max(allowance,billing!.capUnits):allowance,plan:subscription?.productId??'dev'}}
+// Keep counting exempt usage; omit both the quota condition and its unused operands.
+export function quotaCounterOptions(exempt:boolean,units:number,limit:number){return {
+ ...(exempt?{}:{ConditionExpression:'(attribute_not_exists(#count) AND :one <= :limit) OR #count <= :remaining'}),
+ ExpressionAttributeNames:{'#count':'count'},ExpressionAttributeValues:{':one':units,...(exempt?{}:{':limit':limit,':remaining':limit-units})}
+};}
 export async function consume(tenantId:string,units=1){if(!Number.isInteger(units)||units<1||units>12)throw new Error("Invalid image units");const window=await quotaWindow(tenantId),limit=window.limit;
   // SaaS image units get a durable ledger record in the same transaction as the quota counter; private installs only count.
   const entry=process.env.AUTOVISION_DEPLOYMENT_MODE==='saas'?imageUsage(tenantId,units,window.key):null;
-  if(table){try{await db.send(new TransactWriteCommand({TransactItems:[{Update:{TableName:table,Key:{pk:'ORG#'+tenantId,sk:window.key},UpdateExpression:'ADD #count :one',ConditionExpression:'(attribute_not_exists(#count) AND :one <= :limit) OR #count <= :remaining',ExpressionAttributeNames:{'#count':'count'},ExpressionAttributeValues:{':one':units,':limit':limit,':remaining':limit-units}}},...(entry?[{Put:{TableName:table,Item:{...usageKey(entry),...entry}}}]:[])]}));return true}catch(e){if(e instanceof Error&&e.name==='TransactionCanceledException'&&(e as {CancellationReasons?:{Code?:string}[]}).CancellationReasons?.[0]?.Code==='ConditionalCheckFailed')return false;throw e}}const k=tenantId+window.key,n=usage.get(k)??0;if(n+units>limit)return false;usage.set(k,n+units);if(entry)rememberLocal(entry);return true}
+  if(table){try{await db.send(new TransactWriteCommand({TransactItems:[{Update:{TableName:table,Key:{pk:'ORG#'+tenantId,sk:window.key},UpdateExpression:'ADD #count :one',...quotaCounterOptions(window.quotaExempt,units,limit)}},...(entry?[{Put:{TableName:table,Item:{...usageKey(entry),...entry}}}]:[])]}));return true}catch(e){if(e instanceof Error&&e.name==='TransactionCanceledException'&&(e as {CancellationReasons?:{Code?:string}[]}).CancellationReasons?.[0]?.Code==='ConditionalCheckFailed')return false;throw e}}const k=tenantId+window.key,n=usage.get(k)??0;if(!window.quotaExempt&&n+units>limit)return false;usage.set(k,n+units);if(entry)rememberLocal(entry);return true}
 
 
-export async function usageFor(tenantId:string){const w=await quotaWindow(tenantId);let count=usage.get(tenantId+w.key)??0;if(table){const r=await db.send(new GetCommand({TableName:table,Key:{pk:'ORG#'+tenantId,sk:w.key},ConsistentRead:true}));count=Number(r.Item?.count??0)}return{month:w.month,period_start:w.periodStart,count,limit:w.allowance,cap:w.overage?w.limit:null,plan:w.plan}}
+export async function usageFor(tenantId:string){const w=await quotaWindow(tenantId);let count=usage.get(tenantId+w.key)??0;if(table){const r=await db.send(new GetCommand({TableName:table,Key:{pk:'ORG#'+tenantId,sk:w.key},ConsistentRead:true}));count=Number(r.Item?.count??0)}return{quotaExempt:w.quotaExempt,month:w.month,period_start:w.periodStart,count,limit:w.allowance,cap:w.overage?w.limit:null,plan:w.plan}}
 

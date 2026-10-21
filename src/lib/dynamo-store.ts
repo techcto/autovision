@@ -35,6 +35,11 @@ export const dynamoStore={
     await client.send(new PutCommand({TableName:tableName,Item:{pk:`ORG#${org.id}`,sk:`ORG#${org.id}`,gsi1pk:'ORG',gsi1sk:`${org.createdAt}#${org.id}`,...org}}));
     return org;
   },
+  async singleDeploymentOrgId():Promise<string|null>{
+    await ensureTable();
+    const pointer=await client.send(new GetCommand({TableName:tableName,Key:{pk:SINGLETON_PK,sk:SINGLETON_SK},ConsistentRead:true}));
+    return typeof pointer.Item?.orgId==='string'?pointer.Item.orgId:null;
+  },
   async ensureSingleDeploymentOrg():Promise<Organization>{
     await ensureTable();
     const pointer=await client.send(new GetCommand({TableName:tableName,Key:{pk:SINGLETON_PK,sk:SINGLETON_SK}}));

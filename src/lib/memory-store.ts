@@ -15,6 +15,7 @@ export const memoryStore={
     state.orgs.set(org.id,org);
     return org;
   },
+  async singleDeploymentOrgId():Promise<string|null>{return state.singletonOrgId&&state.orgs.has(state.singletonOrgId)?state.singletonOrgId:null},
   async ensureSingleDeploymentOrg():Promise<Organization>{
     if(state.singletonOrgId){const org=state.orgs.get(state.singletonOrgId);if(org)return org}
     const org:Organization={id:randomUUID(),name:'AutoVision',slug:'autovision',ownerId:'',orgType:'business',enrollmentToken:randomUUID(),createdAt:new Date().toISOString()};

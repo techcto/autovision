@@ -378,3 +378,14 @@ It prepares a CloudFormation change set, shows changes, asks for review/confirma
 executes the exact approved plan, and waits for completion. Existing parameters and
 credentials are preserved. See [update commands and offline tests](docs/cft-update.md).
 
+
+### Operator workspace image quota
+
+The root login’s default deployment workspace and API keys issued in that workspace
+are exempt from image-quota enforcement. Image counters, usage ledger entries and
+per-request safety limits still apply. Customer organizations remain capped, even
+when root creates or switches into them. Exemption uses the server-managed deployment
+organization pointer, never a username, organization name or caller-supplied flag.
+Existing counters are preserved; no reset or database migration is required. Deploy
+the updated AutoVision image through the normal release/CloudFormation update flow
+before expecting this behavior at the hosted API.
