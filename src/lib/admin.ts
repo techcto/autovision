@@ -33,16 +33,28 @@ async function organizationBlocker(org:Organization){
  if((await store.subscriptions(org.id)).some(s=>s.stripeSubscriptionId&&s.status!=='canceled'))return `${org.name} has a Stripe subscription that is not canceled. Cancel it from the organization's billing page first so usage is invoiced and billing stops.`;
  return null;
 }
+// Members whose only organizations are being deleted lose their accounts too: without an organization they can neither
+// sign in nor be found in the admin directory.
+async function lastMembers(orgIds:string[],exceptUserId?:string){
+ const gone=new Set(orgIds),users=new Map<string,AutoVisionUser>();
+ for(const id of orgIds)for(const {user} of await store.membersOfOrg(id))if(user.id!==exceptUserId)users.set(user.id,user);
+ const last:AutoVisionUser[]=[];
+ for(const user of users.values())if((await store.orgsForUser(user.id)).every(m=>gone.has(m.org.id)))last.push(user);
+ return last;
+}
 export async function organizationDeletion(id:string):Promise<DeletionImpact|null>{
  const org=await store.organizationById(id);if(!org)return null;
- const [members,keys,jobs,blocker]=await Promise.all([store.membersOfOrg(id),listKeys(id),listJobs(id),organizationBlocker(org)]);
- return {name:org.name,type:'organization',blocker,subtext:'Members lose access immediately. API keys, jobs, usage records, settings and devices are deleted with it; the users themselves are kept.',related:[{name:'Members',items:members.map(m=>m.user.displayName)},{name:'API keys',items:keys.map(k=>k.label)},{name:'Recent jobs',items:jobs.length?[`${jobs.length} job${jobs.length===1?'':'s'}`]:[]}]};
+ const [members,last,keys,jobs,blocker]=await Promise.all([store.membersOfOrg(id),lastMembers([id]),listKeys(id),listJobs(id),organizationBlocker(org)]);
+ return {name:org.name,type:'organization',blocker,subtext:'Members lose access immediately, and members who belong to no other organization are deleted with it. API keys, jobs, usage records, settings and devices are deleted too.',related:[{name:'Accounts deleted',items:last.map(u=>u.displayName)},{name:'Members removed (accounts kept)',items:members.filter(m=>!last.some(u=>u.id===m.user.id)).map(m=>m.user.displayName)},{name:'API keys',items:keys.map(k=>k.label)},{name:'Recent jobs',items:jobs.length?[`${jobs.length} job${jobs.length===1?'':'s'}`]:[]}]};
 }
 export async function deleteOrganization(id:string){
  const org=await store.organizationById(id);if(!org)return false;
  const blocker=await organizationBlocker(org);if(blocker)throw new DeletionBlocked(blocker);
+ const members=await store.membersOfOrg(id);
  await revokeKeys(id);await purgeJobs(id);
- return store.deleteOrganization(id);
+ const deleted=await store.deleteOrganization(id);
+ for(const {user} of members)if(!(await store.orgsForUser(user.id)).length)await store.deleteUser(user.id);
+ return deleted;
 }
 // Like Cloud: an owned organization that other active members still use passes to one of them (an admin first, then
 // the longest-standing member, who becomes admin); one nobody else uses is deleted with the user.
@@ -57,7 +69,8 @@ async function userPlan(id:string){
 }
 export async function userDeletion(id:string):Promise<DeletionImpact|null>{
  const plan=await userPlan(id);if(!plan)return null;
- return {name:plan.user.displayName,type:'user',blocker:plan.blocker,subtext:'Deleting this user also deletes the organizations they own that nobody else uses, with all of their API keys, jobs and usage. Shared organizations they own pass to another active member.',related:[{name:'Organizations deleted',items:plan.remove.map(o=>o.name)},{name:'Ownership transferred',items:plan.transfer.map(t=>`${t.org.name} → ${t.to.displayName}`)},{name:'Memberships removed',items:plan.memberships.filter(m=>!plan.remove.some(o=>o.id===m.org.id)).map(m=>m.org.name)}]};
+ const last=await lastMembers(plan.remove.map(o=>o.id),id);
+ return {name:plan.user.displayName,type:'user',blocker:plan.blocker,subtext:'Deleting this user also deletes the organizations they own that nobody else uses, with all of their API keys, jobs and usage, and the accounts of members who belong to no other organization. Shared organizations they own pass to another active member.',related:[{name:'Organizations deleted',items:plan.remove.map(o=>o.name)},{name:'Ownership transferred',items:plan.transfer.map(t=>`${t.org.name} → ${t.to.displayName}`)},{name:'Memberships removed',items:plan.memberships.filter(m=>!plan.remove.some(o=>o.id===m.org.id)).map(m=>m.org.name)},{name:'Member accounts deleted',items:last.map(u=>u.displayName)}]};
 }
 export async function deleteUserAccount(id:string){
  const plan=await userPlan(id);if(!plan)return false;

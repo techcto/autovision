@@ -95,12 +95,16 @@ try{
  assert.equal((await api.post(base+'/api/auth/login',{data:{username:userName,password:userPassword}})).status(),401,'deleted user cannot sign in');
  // Admin organization deletion from the detail page: API keys stop working and the detail page is gone.
  assert.equal((await api.delete(base+`/api/orgs/${orgId}`,{data:{}})).status(),400,'API requires the typed confirmation');
+ // A member whose only organization is this one: the account is deleted with it.
+ const lastMember=await api.post(base+'/api/v1/users',{data:{username:'synthetic-last-member-'+run,displayName:'Synthetic Last Member',password:'synthetic-last-'+randomUUID(),role:'viewer'}});assert.equal(lastMember.status(),201,await lastMember.text());const lastMemberId=(await lastMember.json()).id;cleanup.unshift(`/api/v1/users/${lastMemberId}`);
  await page.goto(base+`/admin/organizations/${orgId}`);await page.getByRole('button',{name:'Delete',exact:true}).click();
  const orgDrawer=page.locator('.offcanvas.show');await orgDrawer.getByText('Synthetic admin E2E key').waitFor();
+ await orgDrawer.getByText('Accounts deleted').waitFor();await orgDrawer.getByText('Synthetic Last Member').waitFor();
  await orgDrawer.getByLabel('Type DELETE to confirm').fill('delete');assert.ok(await orgDrawer.getByRole('button',{name:'Delete',exact:true}).isDisabled(),'confirmation is case-sensitive');
  await orgDrawer.getByLabel('Type DELETE to confirm').fill('DELETE');await shot(page,'organization-delete');await orgDrawer.getByRole('button',{name:'Delete',exact:true}).click();await page.waitForURL(u=>new URL(u).pathname==='/admin/organizations');
  assert.equal(await page.getByRole('link',{name:new RegExp(orgName)}).count(),0);
  assert.equal((await api.get(base+`/admin/organizations/${orgId}`)).status(),404);
+ assert.equal((await api.get(base+`/admin/users/${lastMemberId}`)).status(),404,'the member with no other organization is deleted');
  const anonymous=await browser.newContext();assert.equal((await anonymous.request.post(base+'/api/v1/analyze',{headers:{Authorization:'Bearer '+key.key},data:{image,classify:false}})).status(),401,'deleted organization API keys stop authenticating');await anonymous.close();
  key=undefined;
  console.log(`PASS: admin sidenav, organization/user/job list and detail pages (job ${expected}), privacy limits, root-only access, links, forgot password, account/user/organization deletion.`);

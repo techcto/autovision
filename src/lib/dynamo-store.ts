@@ -7,9 +7,13 @@ import{defaultSettings}from'./model';
 const tableName=process.env.AUTOVISION_TABLE??'autovision-local';
 const client=DynamoDBDocumentClient.from(new DynamoDBClient({endpoint:process.env.AUTOVISION_DYNAMODB_ENDPOINT}),{marshallOptions:{removeUndefinedValues:true}});
 
+// Only a local DynamoDB table is ever created by the app; AWS tables and indexes stay CloudFormation-managed.
+export function isLocalDynamoEndpoint(endpoint=process.env.AUTOVISION_DYNAMODB_ENDPOINT){
+  try{return ['localhost','127.0.0.1','[::1]','autovision-dynamodb'].includes(new URL(endpoint??'').hostname)}catch{return false}
+}
 let tableReady:Promise<void>|null=null;
 function ensureTable(){
-  if(!process.env.AUTOVISION_DYNAMODB_ENDPOINT)return Promise.resolve();
+  if(!isLocalDynamoEndpoint())return Promise.resolve();
   if(!tableReady)tableReady=(async()=>{
     try{
       await client.send(new CreateTableCommand({

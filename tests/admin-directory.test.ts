@@ -26,15 +26,17 @@ test('admin job directory spans organizations and exposes job status only',async
 });
 const member=(orgId:string,userId:string,role:'admin'|'operator'|'viewer',createdAt=now)=>store.putMembership({id:randomUUID(),orgId,userId,role,status:'active',createdAt,updatedAt:createdAt});
 const syntheticUser=async(name:string)=>{const u={id:randomUUID(),username:'synthetic-'+randomUUID(),displayName:name,status:'active' as const,createdAt:now,updatedAt:now};await store.putUser(u,'hash');return u};
-test('deleting an organization removes its members, API keys and jobs but keeps the users',async()=>{
- const user=await syntheticUser('Synthetic Deletion Member'),org=await store.createOrganization({name:'Synthetic deletion org',ownerId:'root',orgType:'business'});
- await member(org.id,user.id,'viewer');const key=await createKey(org.id,'Synthetic deletion key');await saveJob(newJob(org.id,{kind:'user',id:user.id,label:'x'},'manual',1));
+test('deleting an organization removes its API keys and jobs, and the accounts of members with no other organization',async()=>{
+ const user=await syntheticUser('Synthetic Deletion Member'),shared=await syntheticUser('Synthetic Shared Member'),org=await store.createOrganization({name:'Synthetic deletion org',ownerId:'root',orgType:'business'}),elsewhere=await store.createOrganization({name:'Synthetic elsewhere org',ownerId:'root',orgType:'business'});
+ await member(org.id,user.id,'viewer');await member(org.id,shared.id,'operator');await member(elsewhere.id,shared.id,'viewer');const key=await createKey(org.id,'Synthetic deletion key');await saveJob(newJob(org.id,{kind:'user',id:user.id,label:'x'},'manual',1));
  const impact=await organizationDeletion(org.id);
  assert.equal(impact?.blocker,null);assert.deepEqual(impact?.related.find(r=>r.name==='API keys')?.items,['Synthetic deletion key']);
+ assert.deepEqual(impact?.related.find(r=>r.name==='Accounts deleted')?.items,['Synthetic Deletion Member']);assert.deepEqual(impact?.related.find(r=>r.name==='Members removed (accounts kept)')?.items,['Synthetic Shared Member']);
  assert.equal(await deleteOrganization(org.id),true);
  assert.equal(await store.organizationById(org.id),null);assert.equal(await store.membership(org.id,user.id),null);
  assert.equal(await authenticateKey('Bearer '+key.key),null,'API keys stop authenticating');assert.equal((await listJobs(org.id)).length,0);
- assert.ok(await store.userById(user.id),'members are kept');
+ assert.equal(await store.userById(user.id),null,'a member with no other organization is deleted');assert.equal(await store.password(user.id),null);
+ const kept=await store.userById(shared.id);assert.ok(kept,'a member of another organization keeps the account');assert.deepEqual((await store.orgsForUser(shared.id)).map(m=>m.org.id),[elsewhere.id]);
  assert.equal(await deleteOrganization(org.id),false);
 });
 test('organization deletion is blocked by a live Stripe subscription and for the operator workspace',async()=>{
@@ -49,13 +51,14 @@ test('deleting a user hands shared owned organizations to an admin and deletes o
  const owner=await syntheticUser('Synthetic Owner'),early=await syntheticUser('Synthetic Early Operator'),admin=await syntheticUser('Synthetic Later Admin');
  const solo=await store.createOrganization({name:'Synthetic solo org',ownerId:owner.id,orgType:'personal'}),shared=await store.createOrganization({name:'Synthetic shared org',ownerId:owner.id,orgType:'business'}),other=await store.createOrganization({name:'Synthetic other org',ownerId:'root',orgType:'business'});
  await member(solo.id,owner.id,'admin');await member(shared.id,owner.id,'admin');await member(other.id,owner.id,'viewer');
+ const dormant=await syntheticUser('Synthetic Disabled Solo Member');await store.putMembership({id:randomUUID(),orgId:solo.id,userId:dormant.id,role:'viewer',status:'disabled',createdAt:now,updatedAt:now});
  await member(shared.id,early.id,'operator','2020-01-01T00:00:00.000Z');await member(shared.id,admin.id,'admin');
  const impact=await userDeletion(owner.id);
- assert.deepEqual(impact?.related.map(r=>r.items.sort()),[['Synthetic solo org'],['Synthetic shared org → Synthetic Later Admin'],['Synthetic other org','Synthetic shared org']]);
+ assert.deepEqual(impact?.related.map(r=>r.items.sort()),[['Synthetic solo org'],['Synthetic shared org → Synthetic Later Admin'],['Synthetic other org','Synthetic shared org'],['Synthetic Disabled Solo Member']]);
  assert.equal(await deleteUserAccount(owner.id),true);
  assert.equal(await store.userById(owner.id),null);assert.equal(await store.password(owner.id),null);assert.deepEqual(await store.orgsForUser(owner.id),[]);
- assert.equal(await store.organizationById(solo.id),null);
- assert.equal((await store.organizationById(shared.id))?.ownerId,admin.id);assert.ok(await store.organizationById(other.id));
+ assert.equal(await store.organizationById(solo.id),null);assert.equal(await store.userById(dormant.id),null,'a disabled member of a deleted solo organization goes with it');
+ assert.equal((await store.organizationById(shared.id))?.ownerId,admin.id);assert.ok(await store.userById(early.id),'members of surviving organizations are kept');assert.ok(await store.organizationById(other.id));
  assert.equal((await store.membership(shared.id,early.id))?.role,'operator');
 });
 test('user deletion is blocked when an owned organization nobody else uses still has a live subscription',async()=>{
