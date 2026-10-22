@@ -65,7 +65,8 @@ try{
  // Forgot password: login link -> request -> reset link -> new password works; a used page without a token offers a new link.
  const selfName='synthetic-self-'+run,selfPassword='synthetic-self-'+randomUUID(),newPassword='synthetic-reset-'+randomUUID();
  const self=await browser.newContext(),selfPage=await self.newPage();
- const signup=await self.request.post(base+'/api/auth/signup',{data:{displayName:'Synthetic Self Delete '+run,username:selfName,password:selfPassword}});assert.equal(signup.status(),201);cleanup.unshift(`/api/v1/users/${(await signup.json()).id}`);
+ const signup=await self.request.post(base+'/api/auth/signup',{data:{displayName:'Synthetic Self Delete '+run,email:`${selfName}@example.com`,username:selfName,password:selfPassword}});assert.equal(signup.status(),201);const signupBody=await signup.json();cleanup.unshift(`/api/v1/users/${signupBody.id}`);
+ assert.equal((await self.request.post(base+'/api/auth/verify-email',{data:{token:new URL(signupBody.verifyLink).searchParams.get('token')}})).status(),200,'verify the new account before signing in');
  await self.clearCookies();
  await selfPage.goto(base+'/login');await selfPage.getByRole('link',{name:'Forgot password?'}).click();await selfPage.waitForURL('**/login/forgot-password');await selfPage.waitForLoadState('networkidle');
  await selfPage.getByLabel('Username').fill(selfName);await selfPage.getByRole('button',{name:'Send reset link'}).click();
