@@ -88,6 +88,29 @@ export const dynamoStore={
     await client.send(new DeleteCommand({TableName:tableName,Key:{pk:`ORG#${orgId}`,sk:`MEMBER#${userId}`}}));
     return true;
   },
+  async putOrganization(v:Organization){
+    await ensureTable();
+    await client.send(new PutCommand({TableName:tableName,Item:{pk:`ORG#${v.id}`,sk:`ORG#${v.id}`,gsi1pk:'ORG',gsi1sk:`${v.createdAt}#${v.id}`,...v}}));
+  },
+  // Sweeps the whole ORG# partition, so record types added later are covered too. Memberships and API key lookups go
+  // first to cut access immediately; the organization row goes last so an interrupted run stays listed and can be retried.
+  async deleteOrganization(id:string):Promise<boolean>{
+    await ensureTable();
+    const sweep=async(pk:string)=>{
+      const items:Record<string,string>[]=[];let start:Record<string,unknown>|undefined;
+      do{const r=await client.send(new QueryCommand({TableName:tableName,KeyConditionExpression:'pk=:pk',ExpressionAttributeValues:{':pk':pk},ProjectionExpression:'pk,sk,#hash,serverId',ExpressionAttributeNames:{'#hash':'hash'},ExclusiveStartKey:start,ConsistentRead:true}));items.push(...(r.Items??[]) as Record<string,string>[]);start=r.LastEvaluatedKey}while(start);
+      return items;
+    };
+    const rank=(sk:string)=>sk.startsWith('MEMBER#')?0:sk.startsWith('KEY#')?1:sk===`ORG#${id}`?3:2;
+    const items=(await sweep(`ORG#${id}`)).sort((a,b)=>rank(a.sk)-rank(b.sk));
+    if(!items.some(v=>v.sk===`ORG#${id}`))return false;
+    for(const item of items){
+      if(item.sk.startsWith('KEY#')&&item.hash)await client.send(new DeleteCommand({TableName:tableName,Key:{pk:`APIKEY#${item.hash}`,sk:'KEY'}}));
+      if(item.sk.startsWith('NODE#'))for(const event of await sweep(`ORG#${id}#NODE#${item.serverId}`))await client.send(new DeleteCommand({TableName:tableName,Key:{pk:event.pk,sk:event.sk}}));
+      await client.send(new DeleteCommand({TableName:tableName,Key:{pk:item.pk,sk:item.sk}}));
+    }
+    return true;
+  },
   async upsertNode(v:Node){
     await ensureTable();
     await client.send(new PutCommand({TableName:tableName,Item:{pk:`ORG#${v.tenantId}`,sk:`NODE#${v.serverId}`,...v}}));

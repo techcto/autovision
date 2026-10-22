@@ -13,12 +13,12 @@ const client=new Client({name:'autovision-local-test',version:'1.0.0'});
 let revoked=false;
 try{
  await client.connect(new StreamableHTTPClientTransport(new URL(base+'/mcp'),{requestInit:{headers:{Authorization:'Bearer '+key.key}}}));
- const tools=await client.listTools();assert.deepEqual(tools.tools.map(t=>t.name).sort(),['analyze_image','analyze_video_frames']);
+ const tools=await client.listTools();assert.deepEqual(tools.tools.map(t=>t.name).sort(),['analyze_image','analyze_video_frames','assess_scene','enhance_low_light','inspect_region','inspect_scene','list_vision_lenses']);
  const invalid=await client.callTool({name:'analyze_video_frames',arguments:{frames:[],classify:false}});
  assert.equal(invalid.isError,true,'Invalid frame input must return an MCP tool error');
  const rest=await fetch(base+'/api/v1/analyze',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+key.key},body:JSON.stringify({image,classify:false})});
  assert.equal(rest.status,200,'The same API key must authorize REST and MCP');
- assert.ok(tools.tools.every(t=>t.annotations?.readOnlyHint===false));
+ assert.ok(tools.tools.every(t=>t.annotations?.readOnlyHint===(t.name==='list_vision_lenses')),'Only lens discovery is read-only; analysis tools create jobs');
  const ai=process.env.AUTOVISION_TEST_BEDROCK==='true';
  const single=await client.callTool({name:'analyze_image',arguments:{image,classify:ai}});
  assert.ok(!single.isError,JSON.stringify(single.content));assert.ok(single.structuredContent?.job_id);

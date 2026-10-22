@@ -11,7 +11,7 @@ try{
  const health=await context.request.get(base+'/api/health');assert.equal(health.status(),200);
  await page.goto(base);await page.getByRole('heading',{name:'Give your app a pair of eyes.'}).waitFor();
  await page.getByRole('checkbox',{name:'Include Bedrock AI scene classification'}).uncheck();
- for(const title of ['Dog at night','Package delivery','Backyard visitor']){const card=page.getByRole('region',{name:title+' video analysis demo',exact:true});await card.getByRole('button',{name:'View analysis →',exact:true}).click();await card.getByRole('status').waitFor();assert.equal(await card.locator('.av-hero-demo-sample').count(),1);await card.getByRole('button',{name:'Back to video',exact:true}).click();console.log('Cached sample passed: '+title);}
+ for(const title of ['Dog at night','Package delivery','Backyard visitor']){const card=page.getByRole('region',{name:title+' video analysis demo',exact:true});await card.getByRole('button',{name:'View analysis →',exact:true}).click();await card.getByRole('status').first().waitFor();assert.equal(await card.locator('.av-hero-demo-sample').count(),1);await card.getByRole('button',{name:'Back to video',exact:true}).click();console.log('Cached sample passed: '+title);}
  assert.equal((await context.request.get(base+'/api/v1/jobs')).status(),401);
  assert.equal((await context.request.post(base+'/api/auth/signup',{data:{username:'synthetic',password:'synthetic-password',displayName:'Demo'}})).status(),403);
  await page.goto(base+'/login');assert.equal(await page.getByRole('button',{name:'Create account',exact:true}).count(),0);

@@ -36,6 +36,14 @@ export const memoryStore={
     return rows.map(membership=>({membership,org:state.orgs.get(membership.orgId)})).filter((r):r is{membership:OrgMembership;org:Organization}=>!!r.org);
   },
   async deleteMembership(orgId:string,userId:string){return state.memberships.delete(membershipKey(orgId,userId))},
+  async putOrganization(v:Organization){state.orgs.set(v.id,v)},
+  async deleteOrganization(id:string){
+    for(const[k,m]of state.memberships)if(m.orgId===id)state.memberships.delete(k);
+    for(const map of[state.nodes,state.incidents,state.events])for(const k of map.keys())if(k.startsWith(id+'\0'))map.delete(k);
+    for(const[k,v]of state.subscriptions)if(v.orgId===id)state.subscriptions.delete(k);
+    state.settings.delete(id);
+    return state.orgs.delete(id);
+  },
   async upsertNode(v:Node){const existing=state.nodes.get(key(v.tenantId,v.serverId));state.nodes.set(key(v.tenantId,v.serverId),{...existing,...v,createdAt:existing?.createdAt??v.createdAt})},
   async nodes(tenant:string){return[...state.nodes.values()].filter(x=>x.tenantId===tenant)},
   async node(tenant:string,serverId:string){return state.nodes.get(key(tenant,serverId))??null},

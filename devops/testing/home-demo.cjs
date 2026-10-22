@@ -24,7 +24,7 @@ if(!['localhost','127.0.0.1'].includes(new URL(base).hostname))throw Error('Loca
   const result=await(await page.request.get(base+'/demo/intruder-analysis.json')).json();
   console.log('Cached analysis loaded');
   await hero.getByRole('button',{name:'View analysis →',exact:true}).click();
-  assert.equal(await hero.getByRole('status').textContent(),`Sample 1 of ${result.frames.length} · 0.0s`);
+  assert.equal(await hero.getByRole('status').first().textContent(),`Sample 1 of ${result.frames.length} · 0.0s`);
   assert.ok(await hero.getByRole('button',{name:'← Previous',exact:true}).isDisabled());
   for(let i=0;i<result.frames.length;i++){
    await hero.getByRole('button',{name:`Show analyzed sample ${(result.frames[i].at_ms/1000).toFixed(1)} seconds`,exact:true}).click();
@@ -33,7 +33,7 @@ if(!['localhost','127.0.0.1'].includes(new URL(base).hostname))throw Error('Loca
   }
   assert.ok(await hero.getByRole('button',{name:'Next →',exact:true}).isDisabled());
   await hero.getByRole('button',{name:'← Previous',exact:true}).click();
-  assert.match(await hero.getByRole('status').textContent(),new RegExp('Sample '+(result.frames.length-1)+' of'));
+  assert.match(await hero.getByRole('status').first().textContent(),new RegExp('Sample '+(result.frames.length-1)+' of'));
   const video=hero.locator('video');
   assert.equal(await video.evaluate(v=>v.controls),false);
   assert.ok(await video.evaluate(v=>v.muted&&v.loop&&v.autoplay));
