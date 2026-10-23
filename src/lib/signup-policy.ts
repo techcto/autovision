@@ -1,8 +1,9 @@
 import {createHmac} from 'node:crypto';
 import {DynamoDBClient} from '@aws-sdk/client-dynamodb';
 import {DynamoDBDocumentClient,UpdateCommand} from '@aws-sdk/lib-dynamodb';
+import {localEmulation} from './local-emulation';
 export class SignupError extends Error{constructor(message:string,public status=400,public retryAfter?:number){super(message);}}
-export const localAuthLinks=()=>process.env.NODE_ENV!=='production'||process.env.AUTOVISION_DEPLOYMENT_MODE!=='saas'&&process.env.AUTOVISION_LOCAL_REPLAY==='true';
+export const localAuthLinks=()=>process.env.NODE_ENV!=='production'||localEmulation()||process.env.AUTOVISION_DEPLOYMENT_MODE!=='saas'&&process.env.AUTOVISION_LOCAL_REPLAY==='true';
 export function checkEmailDomain(email:string){
  const domain=email.split('@')[1];
  const blocked=(process.env.AUTOVISION_BLOCKED_SIGNUP_DOMAINS??'').split(',').map(v=>v.trim().toLowerCase()).filter(Boolean);

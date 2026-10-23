@@ -4,6 +4,8 @@ import {readFileSync} from 'node:fs';
 for(const name of ['autovision.yaml','autovision-existing.yaml']){
  const template=JSON.parse(readFileSync(new URL('../cloudformation/'+name,import.meta.url)));
  test(name+': install secrets are retained, encrypted and not plain task environment values',()=>{
+  assert.equal(template.Parameters.StripeMode.Default,'live');
+  assert.deepEqual(template.Parameters.StripeMode.AllowedValues,['live','sandbox']);
   for(const id of ['RootPasswordSecret','SessionSigningSecret','StripeCredentials']){
    const resource=template.Resources[id];assert.equal(resource.Type,'AWS::SecretsManager::Secret');
    assert.equal(resource.DeletionPolicy,'RetainExceptOnCreate');assert.equal(resource.UpdateReplacePolicy,'Retain');
@@ -14,6 +16,7 @@ for(const name of ['autovision.yaml','autovision-existing.yaml']){
    if(resource.Type!=='AWS::ECS::TaskDefinition')continue;
    for(const container of resource.Properties.ContainerDefinitions){
     if(!container.Environment)continue;mainContainers++;
+    assert.ok(container.Environment.some(value=>value.Name==='AUTOVISION_STRIPE_MODE'&&value.Value.Ref==='StripeMode'));
     for(const key of ['AUTOVISION_ROOT_PASSWORD','AUTOVISION_SESSION_SECRET','STRIPE_SECRET_KEY','STRIPE_WEBHOOK_SECRET']){
      assert.ok(!container.Environment.some(value=>value.Name===key));
      assert.ok(container.Secrets.some(value=>(value.Name??value['Fn::If']?.[1]?.Name)===key));

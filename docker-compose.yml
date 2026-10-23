@@ -38,10 +38,12 @@
         "AUTOVISION_PUBLIC_DEMO_ENABLED": "${AUTOVISION_PUBLIC_DEMO_ENABLED:-true}",
         "AUTOVISION_PUBLIC_DEMO_DAILY_LIMIT": "${AUTOVISION_PUBLIC_DEMO_DAILY_LIMIT:-100}",
         "AUTOVISION_VISION_MODEL_ID": "${AUTOVISION_VISION_MODEL_ID:-}",
-        "AUTOVISION_AI_DETECTIONS": "${AUTOVISION_AI_DETECTIONS:-person,dog,cat,bird,car,bicycle,motorcycle,truck,package}"
+        "AUTOVISION_AI_DETECTIONS": "${AUTOVISION_AI_DETECTIONS:-person,dog,cat,bird,car,bicycle,motorcycle,truck,package}",
+        "AUTOVISION_STRIPE_MODE": "sandbox",
+        "AUTOVISION_LOCAL_REPLAY": "true"
       },
       "ports": [
-        "${AUTOVISION_WEB_PORT:-8081}:3000"
+        "127.0.0.1:${AUTOVISION_WEB_PORT:-8081}:3000"
       ],
       "healthcheck": {
         "test": [
@@ -105,7 +107,9 @@
         "AUTOVISION_PUBLIC_DEMO_ENABLED": "${AUTOVISION_PUBLIC_DEMO_ENABLED:-true}",
         "AUTOVISION_PUBLIC_DEMO_DAILY_LIMIT": "${AUTOVISION_PUBLIC_DEMO_DAILY_LIMIT:-100}",
         "AUTOVISION_VISION_MODEL_ID": "${AUTOVISION_VISION_MODEL_ID:-}",
-        "AUTOVISION_AI_DETECTIONS": "${AUTOVISION_AI_DETECTIONS:-person,dog,cat,bird,car,bicycle,motorcycle,truck,package}"
+        "AUTOVISION_AI_DETECTIONS": "${AUTOVISION_AI_DETECTIONS:-person,dog,cat,bird,car,bicycle,motorcycle,truck,package}",
+        "AUTOVISION_STRIPE_MODE": "sandbox",
+        "AUTOVISION_LOCAL_REPLAY": "true"
       },
       "ports": [
         "127.0.0.1:${AUTOVISION_API_PORT:-3101}:3001"
@@ -171,7 +175,9 @@
         "AUTOVISION_HOMEPAGE_MODE": "${AUTOVISION_HOMEPAGE_MODE:-demo}",
         "AUTOVISION_PUBLIC_DEMO_ENABLED": "${AUTOVISION_PUBLIC_DEMO_ENABLED:-true}",
         "AUTOVISION_PUBLIC_DEMO_DAILY_LIMIT": "${AUTOVISION_PUBLIC_DEMO_DAILY_LIMIT:-100}",
-        "AUTOVISION_VISION_MODEL_ID": "${AUTOVISION_VISION_MODEL_ID:-}"
+        "AUTOVISION_VISION_MODEL_ID": "${AUTOVISION_VISION_MODEL_ID:-}",
+        "AUTOVISION_STRIPE_MODE": "sandbox",
+        "AUTOVISION_LOCAL_REPLAY": "true"
       },
       "depends_on": {
         "autovision-dynamodb": {

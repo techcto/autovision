@@ -59,3 +59,29 @@ should generate no inference charges. Determine margins from measured workloads
 and the actual AWS bill, not a flat per-request assumption.
 
 Reference: https://docs.stripe.com/billing/subscriptions/usage-based
+# Sandbox and checkout safeguards
+
+Local Compose forces `AUTOVISION_STRIPE_MODE=sandbox`; live keys are rejected.
+CloudFormation `StripeMode` defaults to `live` and is injected into web, API and
+worker tasks. Use a separate AutoVision sandbox account and its own prices;
+never copy SmartDetector credentials. Production keys remain in Secrets Manager.
+
+Checkout and portal requests require a matching browser Origin and use the
+canonical public origin for return URLs. Checkout validates the configured
+monthly base price without changing AutoVision's image/AI overage pricing.
+Per-workspace DynamoDB locking and persisted Stripe idempotency attempts prevent
+duplicate subscriptions on retries. Existing non-canceled subscriptions must use
+the portal. A completed checkout permits repurchase only when Stripe confirms
+its workspace's old subscription is canceled or expired.
+
+Production-built local SaaS signup can expose verification links only with the
+complete isolated emulator configuration: local AWS credentials, the
+`autovision-local` table, a loopback/local DynamoDB endpoint and
+`AUTOVISION_LOCAL_REPLAY=true`. Compose supplies this boundary. AWS deployments
+still require SES delivery; setting the replay flag alone does not bypass it.
+
+For local billing, set `AUTOVISION_DEPLOYMENT_MODE=saas`, fill AutoVision's test
+key and test price IDs in ignored `.env`, and run `stripe listen --forward-to
+http://localhost:8081/api/billing/webhook`. Put that listener's signing secret
+in `STRIPE_WEBHOOK_SECRET` and restart the local containers. Never use the live
+webhook secret. These safeguards do not enable or change usage-based overages.

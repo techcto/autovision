@@ -231,6 +231,15 @@
       "Default": "",
       "MaxLength": 2048,
       "Description": "Optional comma-separated domains blocked for new accounts, e.g. gmail.com,googlemail.com. Empty allows all domains."
+    },
+    "StripeMode": {
+      "Type": "String",
+      "Default": "live",
+      "AllowedValues": [
+        "live",
+        "sandbox"
+      ],
+      "Description": "Stripe environment. Use live keys in production and sandbox keys only in isolated test deployments."
     }
   },
   "Conditions": {
@@ -1246,6 +1255,12 @@
                 "Value": {
                   "Ref": "StripeCredentialsRevision"
                 }
+              },
+              {
+                "Name": "AUTOVISION_STRIPE_MODE",
+                "Value": {
+                  "Ref": "StripeMode"
+                }
               }
             ],
             "LogConfiguration": {
@@ -1601,6 +1616,12 @@
                 "Value": {
                   "Ref": "StripeCredentialsRevision"
                 }
+              },
+              {
+                "Name": "AUTOVISION_STRIPE_MODE",
+                "Value": {
+                  "Ref": "StripeMode"
+                }
               }
             ],
             "LogConfiguration": {
@@ -1946,6 +1967,12 @@
                 "Name": "AUTOVISION_STRIPE_CREDENTIALS_REVISION",
                 "Value": {
                   "Ref": "StripeCredentialsRevision"
+                }
+              },
+              {
+                "Name": "AUTOVISION_STRIPE_MODE",
+                "Value": {
+                  "Ref": "StripeMode"
                 }
               }
             ],
