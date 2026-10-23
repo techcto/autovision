@@ -30,7 +30,11 @@ try{
  const orgId=page.url().split('/').pop();cleanup.push(`/api/orgs/${orgId}`);
  // Seed a member and an analysis job through the product's own APIs.
  assert.equal((await api.post(base+'/api/orgs/active',{data:{orgId}})).status(),200);
- const member=await api.post(base+'/api/v1/users',{data:{username:userName,displayName:'Synthetic Admin Viewer',password:userPassword,role:'viewer'}});assert.equal(member.status(),201,await member.text());const userId=(await member.json()).id;cleanup.unshift(`/api/v1/users/${userId}`);
+ const seed=await browser.newContext();
+ const seeded=await seed.request.post(base+'/api/auth/signup',{data:{username:userName,displayName:'Synthetic Admin Viewer',email:`${userName}@example.com`,password:userPassword,next:null}});assert.equal(seeded.status(),201,await seeded.text());const seededBody=await seeded.json();cleanup.unshift(`/api/v1/users/${seededBody.id}`);
+ assert.equal((await seed.request.post(base+'/api/auth/verify-email',{data:{token:new URL(seededBody.verifyLink).searchParams.get('token')}})).status(),200);
+ await seed.close();
+ const member=await api.post(base+'/api/v1/users',{headers:{Origin:base},data:{username:userName,role:'viewer'}});assert.equal(member.status(),201,await member.text());const userId=(await member.json()).id;
  const created=await api.post(base+'/api/v1/api-keys',{data:{label:'Synthetic admin E2E key'}});assert.equal(created.status(),201);key=await created.json();
  const image=await page.evaluate(()=>{const c=document.createElement('canvas');c.width=64;c.height=64;const x=c.getContext('2d');x.fillStyle='#222';x.fillRect(0,0,64,64);return c.toDataURL('image/jpeg').split(',')[1]});
  const analyzed=await api.post(base+'/api/v1/analyze',{headers:{Authorization:'Bearer '+key.key},data:{image,classify:false},timeout:120000});
@@ -65,7 +69,8 @@ try{
  // Forgot password: login link -> request -> reset link -> new password works; a used page without a token offers a new link.
  const selfName='synthetic-self-'+run,selfPassword='synthetic-self-'+randomUUID(),newPassword='synthetic-reset-'+randomUUID();
  const self=await browser.newContext(),selfPage=await self.newPage();
- const signup=await self.request.post(base+'/api/auth/signup',{data:{displayName:'Synthetic Self Delete '+run,username:selfName,password:selfPassword}});assert.equal(signup.status(),201);cleanup.unshift(`/api/v1/users/${(await signup.json()).id}`);
+ const signup=await self.request.post(base+'/api/auth/signup',{data:{displayName:'Synthetic Self Delete '+run,email:`${selfName}@example.com`,username:selfName,password:selfPassword}});assert.equal(signup.status(),201);const signupBody=await signup.json();cleanup.unshift(`/api/v1/users/${signupBody.id}`);
+ assert.equal((await self.request.post(base+'/api/auth/verify-email',{data:{token:new URL(signupBody.verifyLink).searchParams.get('token')}})).status(),200,'verify the new account before signing in');
  await self.clearCookies();
  await selfPage.goto(base+'/login');await selfPage.getByRole('link',{name:'Forgot password?'}).click();await selfPage.waitForURL('**/login/forgot-password');await selfPage.waitForLoadState('networkidle');
  await selfPage.getByLabel('Username').fill(selfName);await selfPage.getByRole('button',{name:'Send reset link'}).click();
