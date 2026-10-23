@@ -13,7 +13,7 @@ test('allow Docker external port and HTTPS host without trusting forwarded hosts
 });
 test('password reset links use the browser-facing Host, never the container address or X-Forwarded-Host', async () => {
   process.env.AUTOVISION_SESSION_SECRET='synthetic-reset-origin-secret';
-  const now=new Date().toISOString(),username='synthetic-reset-origin-'+Date.now();
+  const now=new Date().toISOString(),username='reset@example.com';
   await store.putUser({id:'synthetic-reset-origin-'+Date.now(),username,email:'reset@example.com',displayName:'Synthetic Reset',status:'active',createdAt:now,updatedAt:now},'hash');
   const link=async(headers:Record<string,string>)=>(await (await forgotPassword(new NextRequest('http://0.0.0.0:3000/api/auth/forgot-password',{method:'POST',headers:{'content-type':'application/json',...headers},body:JSON.stringify({username})}))).json()).resetLink as string;
   assert.match(await link({host:'localhost:8081','x-forwarded-host':'attacker.test'}),/^http:\/\/localhost:8081\/login\/reset-password\?token=/);

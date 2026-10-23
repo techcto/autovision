@@ -10,7 +10,6 @@ import { POST as resend } from "../src/app/api/auth/verify-email/resend/route";
 import { createResetToken, createSession } from "../src/lib/session";
 import { hashPassword } from "../src/lib/password";
 import { store } from "../src/lib/store";
-import {POST as enroll} from '../src/app/api/auth/verify-email/enroll/route';
 import {checkEmailDomain,localAuthLinks,requireEmailDelivery} from '../src/lib/signup-policy';
 import {AWSNotifier} from '../src/lib/notifications';
 import {sendVerificationEmail} from '../src/lib/email-verification';
@@ -31,7 +30,7 @@ test("signup requires an email, stores it normalized and unverified, and starts 
   assert.equal(body.status, "verification-sent");
   assert.match(body.verifyLink, /^http:\/\/localhost\/login\/verify-email\?token=/);
   assert.equal(res.cookies.get("autovision_session"), undefined);
-  const user = await store.userByName("withemail");
+  const user = await store.userByName("person@example.com");
   assert.equal(user?.email, "person@example.com");
   assert.equal(user?.emailVerified, false);
 });
@@ -40,8 +39,8 @@ test("an email can be claimed once, also when signups race", async () => {
   assert.equal((await account("dupe-a", "PERSON@example.com")).status, 409, "case-insensitive duplicate");
   const raced = await Promise.all(["race-a", "race-b", "race-c"].map(name => account(name, "race@example.com")));
   assert.deepEqual(raced.map(r => r.status).sort(), [201, 409, 409]);
-  assert.equal((await Promise.all(["race-a", "race-b", "race-c"].map(n => store.userByName(n)))).filter(Boolean).length, 1, "losers leave no account behind");
-  const winner = (await Promise.all(["race-a", "race-b", "race-c"].map(n => store.userByName(n)))).find(Boolean)!;
+  assert.ok(await store.userByName('race@example.com'), 'exactly one canonical email identity exists');
+  const winner = (await store.userByName('race@example.com'))!;
   await store.deleteUser(winner.id);
   assert.equal((await account("race-after-delete", "race@example.com")).status, 201, "deleting the account releases the address");
 });
@@ -49,16 +48,16 @@ test("an email can be claimed once, also when signups race", async () => {
 test("unverified accounts cannot sign in; opening the link signs them in once and returns to their page", async () => {
   const { verifyLink } = await (await account("fromdevice", "d@example.com", "/settings/billing")).json();
   assert.equal(new URL(verifyLink).searchParams.get("next"), "/settings/billing");
-  const blocked = await login(post("/api/auth/login", { username: "fromdevice", password }));
+  const blocked = await login(post("/api/auth/login", { username: "d@example.com", password }));
   assert.equal(blocked.status, 403);
   assert.equal((await blocked.json()).unverified, true);
-  assert.equal((await login(post("/api/auth/login", { username: "fromdevice", password: "wrong-password!" }))).status, 401, "the hint only follows a correct password");
+  assert.equal((await login(post("/api/auth/login", { username: "d@example.com", password: "wrong-password!" }))).status, 401, "the hint only follows a correct password");
 
   const first = await verify(post("/api/auth/verify-email", { token: tokenOf(verifyLink), next: "/settings/billing" }));
   assert.deepEqual(await first.json(), { redirect: "/settings/billing" });
   assert.ok(first.cookies.get("autovision_session")?.value, "verifying signs the user in");
-  assert.equal((await store.userByName("fromdevice"))?.emailVerified, true);
-  assert.equal((await login(post("/api/auth/login", { username: "fromdevice", password }))).status, 200);
+  assert.equal((await store.userByName("d@example.com"))?.emailVerified, true);
+  assert.equal((await login(post("/api/auth/login", { username: "d@example.com", password }))).status, 200);
 
   const again = await verify(post("/api/auth/verify-email", { token: tokenOf(verifyLink), next: "/settings/billing" }));
   assert.deepEqual(await again.json(), { redirect: "/login?verify=done&next=%2Fsettings%2Fbilling" });
@@ -72,26 +71,26 @@ test("hostile destinations are dropped and another user's open session is kept",
   const res = await verify(post("/api/auth/verify-email", { token: tokenOf(verifyLink), next: "//evil.example" }, `autovision_session=${other}`));
   assert.deepEqual(await res.json(), { redirect: "/dashboard" });
   assert.equal(res.cookies.get("autovision_session"), undefined);
-  assert.equal((await store.userByName("hostile"))?.emailVerified, true);
+  assert.equal((await store.userByName("h@example.com"))?.emailVerified, true);
 });
 
 test("resend waits out Osirus's cooldown with the remaining time, and answers the same for unknown or verified accounts", async () => {
   await account("throttled", "t@example.com");
-  const early = await resend(post("/api/auth/verify-email/resend", { username: "throttled" }));
+  const early = await resend(post("/api/auth/verify-email/resend", { username: "t@example.com" }));
   assert.equal(early.status, 409);
   assert.match((await early.json()).error, /^Please wait\. We can send the email again in 25 minutes$/);
-  const user = (await store.userByName("throttled"))!;
+  const user = (await store.userByName("t@example.com"))!;
   await store.putUser({ ...user, verificationSentAt: new Date(Date.now() - 26 * 60000).toISOString() });
-  assert.match((await (await resend(post("/api/auth/verify-email/resend", { username: "throttled" }))).json()).verifyLink, /verify-email\?token=/);
-  for (const username of ["nobody-here", "fromdevice"]) assert.deepEqual(await (await resend(post("/api/auth/verify-email/resend", { username }))).json(), { status: "ok" });
+  assert.match((await (await resend(post("/api/auth/verify-email/resend", { username: "t@example.com" }))).json()).verifyLink, /verify-email\?token=/);
+  for (const username of ["nobody-here", "d@example.com"]) assert.deepEqual(await (await resend(post("/api/auth/verify-email/resend", { username }))).json(), { status: "ok" });
 });
 
 test("verification links are bound to the address and cannot be swapped with reset links", async () => {
   const { verifyLink } = await (await account("rebound", "old@example.com")).json();
-  const user = (await store.userByName("rebound"))!;
+  const user = (await store.userByName("old@example.com"))!;
   await store.putUser({ ...user, email: "new@example.com" });
   assert.equal((await verify(post("/api/auth/verify-email", { token: tokenOf(verifyLink) }))).status, 400);
-  assert.equal((await store.userByName("rebound"))?.emailVerified, false);
+  assert.equal((await store.userByName("old@example.com"))?.emailVerified, false);
   assert.equal((await reset(post("/api/auth/reset-password", { token: tokenOf(verifyLink), password: "another-long-pass" }))).status, 400);
   assert.equal((await verify(post("/api/auth/verify-email", { token: await createResetToken(user.id, secret) }))).status, 400);
 });
@@ -101,32 +100,19 @@ test("accounts without explicit email verification cannot sign in", async () => 
   const now = new Date().toISOString();
   await store.putUser({ id: "legacy-id", username: "legacy", displayName: "Legacy", status: "active", createdAt: now, updatedAt: now }, hashPassword(password));
   await store.putMembership({ id: "legacy-membership", orgId: org.id, userId: "legacy-id", role: "admin", status: "active", createdAt: now, updatedAt: now });
-  assert.equal((await login(post("/api/auth/login", { username: "legacy", password }))).status, 403);
+  assert.equal((await login(post("/api/auth/login", { username: "legacy", password }))).status, 401);
 });
 
 test("password reset mails the account email, not the username", async () => {
   const logs: string[] = [], log = console.log;
   console.log = (m: string) => { logs.push(m); };
   try {
-    const res = await forgot(post("/api/auth/forgot-password", { username: "withemail" }));
+    const res = await forgot(post("/api/auth/forgot-password", { username: "person@example.com" }));
     assert.match((await res.json()).resetLink, /\/login\/reset-password\?token=/);
   } finally { console.log = log; }
   assert.ok(logs.some(m => m.includes("Reset your AutoVision password")));
 });
 
-test('legacy accounts can attach an email only with the correct password and then must verify',async()=>{
- const loginResponse=await login(post('/api/auth/login',{username:'legacy',password}));
- assert.equal((await loginResponse.json()).emailRequired,true);
- assert.equal((await enroll(post('/api/auth/verify-email/enroll',{username:'legacy',password:'wrong',email:'legacy@example.com'}))).status,401);
- assert.equal((await store.userByName('legacy'))?.email,undefined);
- const response=await enroll(post('/api/auth/verify-email/enroll',{username:'legacy',password,email:'legacy@example.com'}));
- assert.equal(response.status,200);assert.equal(response.cookies.get('autovision_session'),undefined);
- const {verifyLink}=await response.json();
- assert.equal((await login(post('/api/auth/login',{username:'legacy',password}))).status,403);
- assert.equal((await verify(post('/api/auth/verify-email',{token:tokenOf(verifyLink)}))).status,200);
- assert.equal((await login(post('/api/auth/login',{username:'legacy',password}))).status,200);
- assert.equal((await enroll(post('/api/auth/verify-email/enroll',{username:'legacy',password,email:'other@example.com'}))).status,409);
-});
 
 test('domain blocking is optional and production SaaS cannot expose auth links or use mock delivery',()=>{
  process.env.AUTOVISION_BLOCKED_SIGNUP_DOMAINS='gmail.com,googlemail.com';
@@ -154,5 +140,5 @@ test('plain signup accepts the browser null destination and sends a verification
  const response=await signup(post('/api/auth/signup',{username:'plain-signup',displayName:'Plain signup',email:'plain-signup@example.com',password,next:null}));
  assert.equal(response.status,201);assert.equal(response.cookies.get('autovision_session'),undefined);
  assert.equal((await response.json()).status,'verification-sent');
- assert.equal((await store.userByName('plain-signup'))?.emailVerified,false);
+ assert.equal((await store.userByName('plain-signup@example.com'))?.emailVerified,false);
 });

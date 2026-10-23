@@ -6,11 +6,11 @@ import {chromium} from '@playwright/test';
 const base=process.env.AUTOVISION_TEST_URL||'http://localhost:8081';
 if(!['localhost','127.0.0.1'].includes(new URL(base).hostname))throw new Error('This synthetic signup test is local-only');
 const shots=process.env.AUTOVISION_TEST_SCREENSHOTS;
-const run=randomUUID().slice(0,8),username='synthetic-signup-'+run,password='synthetic-signup-'+randomUUID(),email=`Synthetic.Signup+${run}@Example.COM`;
-const legacyName='synthetic-legacy-'+run,legacyPassword='synthetic-legacy-'+randomUUID();
+const run=randomUUID().slice(0,8),username=('Synthetic.Signup+'+run+'@Example.COM').toLowerCase(),password='synthetic-signup-'+randomUUID(),email=`Synthetic.Signup+${run}@Example.COM`;
+const legacyName='synthetic-admin-'+run+'@example.com',legacyPassword='synthetic-legacy-'+randomUUID();
 const browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_PATH});
 const shot=async(page,name)=>{if(shots)await page.screenshot({path:`${shots}/${name}.png`,fullPage:true})};
-async function signIn(page,name,secret){await page.getByLabel('Username',{exact:true}).fill(name);await page.getByLabel('Password',{exact:true}).fill(secret);await page.locator('form').getByRole('button',{name:'Sign in',exact:true}).click()}
+async function signIn(page,name,secret){await page.getByLabel('Email (or root username)',{exact:true}).fill(name);await page.getByLabel('Password',{exact:true}).fill(secret);await page.locator('form').getByRole('button',{name:'Sign in',exact:true}).click()}
 const cleanup=[];let api;
 try{
  const root=await browser.newContext(),rootPage=await root.newPage();api=root.request;
@@ -20,7 +20,7 @@ try{
  for(const bad of [undefined,'not-an-email']){const r=await context.request.post(base+'/api/auth/signup',{data:{displayName:'Synthetic Signup',username:'synthetic-bad-'+run,password,email:bad}});assert.equal(r.status(),400,await r.text())}
  await page.goto(base+'/login');await page.waitForLoadState('networkidle');await page.getByRole('button',{name:'Create account'}).click();
  assert.equal(await page.getByLabel('Email').getAttribute('required'),'');
- const fill=async(name,address)=>{await page.getByLabel('Display name').fill('Synthetic Signup '+run);await page.getByLabel('Email').fill(address);await page.getByLabel('Username',{exact:true}).fill(name);await page.getByLabel('Password',{exact:true}).fill(password)};
+ const fill=async(name,address)=>{await page.getByLabel('Display name').fill('Synthetic Signup '+run);await page.getByLabel('Email',{exact:true}).fill(address);await page.getByLabel('Password',{exact:true}).fill(password)};
  await fill(username,email);
  const created=page.waitForResponse(r=>r.url().endsWith('/api/auth/signup'));await page.getByRole('button',{name:'Create workspace'}).click();
  const signup=await created;assert.equal(signup.status(),201);const signupBody=await signup.json(),userId=signupBody.id;cleanup.unshift(`/api/v1/users/${userId}`);
@@ -37,7 +37,7 @@ try{
  assert.deepEqual(raced.map(r=>r.status()).sort(),[201,409,409],'one signup claims the address');
  // Signing in before verifying shows the notice; a wrong password still gets the generic error.
  await page.goto(base+'/dashboard');await page.waitForURL(u=>new URL(u).pathname==='/login');await page.waitForLoadState('networkidle');
- await signIn(page,username,'wrong-password-'+run);await page.getByRole('alert').getByText('Invalid username or password').waitFor();
+ await signIn(page,username,'wrong-password-'+run);await page.getByRole('alert').getByText('Invalid email or password').waitFor();
  await signIn(page,username,password);await notice.getByText('Verify your email').waitFor();assert.equal(new URL(page.url()).pathname,'/login');
  // Resend inside Osirus's 25-minute cooldown says how long to wait.
  await notice.getByRole('button',{name:'Resend verification email'}).click();await notice.getByText(/Please wait\. We can send the email again in 2[45] minutes/).waitFor();await shot(page,'resend-cooldown');
@@ -56,7 +56,7 @@ try{
  assert.equal((await reuse.cookies()).filter(c=>c.name==='autovision_session').length,0,'an old link is not a reusable login');
  await signIn(reusePage,username,password);await reusePage.waitForURL(u=>new URL(u).pathname==='/dashboard');await reuse.close();
  // Organization admins cannot bypass email verification when creating a new SaaS account.
- const legacy=await api.post(base+'/api/v1/users',{headers:{Origin:base},data:{username:legacyName,displayName:'Synthetic Admin Account '+run,email:`${legacyName}@example.com`,password:legacyPassword,role:'viewer'}});assert.equal(legacy.status(),201,await legacy.text());cleanup.unshift(`/api/v1/users/${(await legacy.json()).id}`);
+ const legacy=await api.post(base+'/api/v1/users',{headers:{Origin:base},data:{username:legacyName,displayName:'Synthetic Admin Account '+run,email:legacyName,password:legacyPassword,role:'viewer'}});assert.equal(legacy.status(),201,await legacy.text());cleanup.unshift(`/api/v1/users/${(await legacy.json()).id}`);
  const legacyContext=await browser.newContext(),legacyPage=await legacyContext.newPage();
  await legacyPage.goto(base+'/login');await signIn(legacyPage,legacyName,legacyPassword);await legacyPage.locator('.notice').getByText('Verify your email').waitFor();assert.equal(new URL(legacyPage.url()).pathname,'/login');await legacyContext.close();
  await context.close();
