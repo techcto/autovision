@@ -61,6 +61,15 @@ and the actual AWS bill, not a flat per-request assumption.
 Reference: https://docs.stripe.com/billing/subscriptions/usage-based
 # Sandbox and checkout safeguards
 
+Checkout accepts privately distributed Stripe promotion codes. To provision an
+approved unrestricted 100%-forever code, call `ensureForeverPromotion` from
+`forever-promotion.mjs` with the application's own Stripe client and a privately
+supplied code. The coupon covers all products in that application-specific
+Stripe account, including applicable extras. It has no automatic expiration or
+redemption limit. Conflicting existing terms fail closed; no coupon is created
+by default, and codes must not be committed. A forever discount continues on
+renewal unless removed; it does not remove the plan's usage limits or AWS costs.
+
 Local Compose forces `AUTOVISION_STRIPE_MODE=sandbox`; live keys are rejected.
 CloudFormation `StripeMode` defaults to `live` and is injected into web, API and
 worker tasks. Use a separate AutoVision sandbox account and its own prices;

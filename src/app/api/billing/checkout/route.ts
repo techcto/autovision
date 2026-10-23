@@ -25,7 +25,7 @@ export async function POST(req:NextRequest){
    if(!price.active||price.currency!=='usd'||price.recurring?.interval!=='month'||price.recurring.interval_count!==1||price.recurring.usage_type!=='licensed'||price.billing_scheme!=='per_unit'||price.unit_amount!==product.monthlyPrice*100)return NextResponse.json({error:'Stripe pricing does not match this plan'},{status:503});
    const logo=(price.product as {metadata?:Record<string,string>}).metadata?.logo_file;
    const metadata={orgId:session.orgId,productId:product.id};
-   const checkout=await checkoutForWorkspace(session.orgId,{mode:'subscription',branding_settings:{display_name:'AutoVision',background_color:'#f5f7fa',...(logo?{logo:{type:'file',file:logo}}:{})},line_items:[{price:product.stripePriceId,quantity:1}],metadata,subscription_data:{metadata},success_url:origin+'/settings/billing?checkout=success',cancel_url:origin+'/settings/billing?checkout=canceled'},client);
+   const checkout=await checkoutForWorkspace(session.orgId,{mode:'subscription',allow_promotion_codes:true,branding_settings:{display_name:'AutoVision',background_color:'#f5f7fa',...(logo?{logo:{type:'file',file:logo}}:{})},line_items:[{price:product.stripePriceId,quantity:1}],metadata,subscription_data:{metadata},success_url:origin+'/settings/billing?checkout=success',cancel_url:origin+'/settings/billing?checkout=canceled'},client);
    return NextResponse.json({url:checkout.url});
   });
   return result??NextResponse.json({error:'Billing is busy. Please retry.'},{status:409});
