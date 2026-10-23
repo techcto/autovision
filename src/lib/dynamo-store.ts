@@ -1,6 +1,6 @@
 import{randomUUID}from'node:crypto';
 import{DynamoDBClient,CreateTableCommand,UpdateTimeToLiveCommand}from'@aws-sdk/client-dynamodb';
-import{DynamoDBDocumentClient,GetCommand,PutCommand,QueryCommand,DeleteCommand}from'@aws-sdk/lib-dynamodb';
+import{DynamoDBDocumentClient,GetCommand,PutCommand,QueryCommand,DeleteCommand,UpdateCommand,TransactWriteCommand}from'@aws-sdk/lib-dynamodb';
 import type{AutoVisionEvent,AutoVisionUser,IncidentRecord,Node,OrgMembership,Organization,OrgType,Product,Settings,Subscription}from'./model';
 import{defaultSettings}from'./model';
 
@@ -33,6 +33,11 @@ function slugify(name:string){return name.toLowerCase().replace(/[^a-z0-9]+/g,'-
 const SINGLETON_PK='SINGLETON',SINGLETON_SK='SINGLETON';
 
 export const dynamoStore={
+  async claimUserEmail(id:string,email:string){await ensureTable();try{await client.send(new TransactWriteCommand({TransactItems:[{Put:{TableName:tableName,Item:{pk:'EMAIL#'+email,sk:'EMAIL#'+email,userId:id},ConditionExpression:'attribute_not_exists(pk)'}},{Update:{TableName:tableName,Key:{pk:'USER#'+id,sk:'USER#'+id},UpdateExpression:'SET email=:email,emailVerified=:no,updatedAt=:now',ConditionExpression:'attribute_exists(pk) AND attribute_not_exists(email) AND #status=:active',ExpressionAttributeNames:{'#status':'status'},ExpressionAttributeValues:{':email':email,':no':false,':now':new Date().toISOString(),':active':'active'}}}]}));return true;}catch(e){if(e instanceof Error&&e.name==='TransactionCanceledException'&&/ConditionalCheckFailed/.test(e.message))return false;throw e;}},
+  async reserveVerificationEmail(id:string,email:string,sentAt:string,cutoff:string){await ensureTable();try{await client.send(new UpdateCommand({TableName:tableName,Key:{pk:`USER#${id}`,sk:`USER#${id}`},UpdateExpression:'SET verificationSentAt=:sent',ConditionExpression:'email=:email AND (attribute_not_exists(emailVerified) OR emailVerified=:no) AND (attribute_not_exists(verificationSentAt) OR verificationSentAt<=:cutoff)',ExpressionAttributeValues:{':email':email,':no':false,':sent':sentAt,':cutoff':cutoff}}));return true;}catch(e){if(e instanceof Error&&e.name==='ConditionalCheckFailedException')return false;throw e;}},
+  async releaseVerificationEmail(id:string,sentAt:string){await ensureTable();try{await client.send(new UpdateCommand({TableName:tableName,Key:{pk:`USER#${id}`,sk:`USER#${id}`},UpdateExpression:'REMOVE verificationSentAt',ConditionExpression:'verificationSentAt=:sent',ExpressionAttributeValues:{':sent':sentAt}}));}catch(e){if(!(e instanceof Error&&e.name==='ConditionalCheckFailedException'))throw e;}},
+  async verifyUserEmail(id:string,email:string){await ensureTable();try{await client.send(new UpdateCommand({TableName:tableName,Key:{pk:`USER#${id}`,sk:`USER#${id}`},UpdateExpression:'SET emailVerified=:yes, updatedAt=:now',ConditionExpression:'email=:email AND (attribute_not_exists(emailVerified) OR emailVerified=:no) AND #status=:active',ExpressionAttributeNames:{'#status':'status'},ExpressionAttributeValues:{':email':email,':no':false,':yes':true,':active':'active',':now':new Date().toISOString()}}));return true;}catch(e){if(e instanceof Error&&e.name==='ConditionalCheckFailedException')return false;throw e;}},
+
   async createOrganization(v:{name:string;ownerId:string;orgType:OrgType;contactEmail?:string;contactPhone?:string}):Promise<Organization>{
     await ensureTable();
     const org:Organization={id:randomUUID(),name:v.name,slug:`${slugify(v.name)}-${randomUUID().slice(0,6)}`,ownerId:v.ownerId,orgType:v.orgType,contactEmail:v.contactEmail,contactPhone:v.contactPhone,enrollmentToken:randomUUID(),createdAt:new Date().toISOString()};
@@ -163,6 +168,19 @@ export const dynamoStore={
     const r=await client.send(new QueryCommand({TableName:tableName,IndexName:'GSI1',KeyConditionExpression:'gsi1pk=:pk',ExpressionAttributeValues:{':pk':`USERNAME#${username.toLowerCase()}`}}));
     return (r.Items?.[0] as AutoVisionUser)??null;
   },
+  async createUser(v:AutoVisionUser,passwordHash:string):Promise<boolean>{
+    await ensureTable();
+    const email=v.email?.toLowerCase();
+    try{
+      await client.send(new TransactWriteCommand({TransactItems:[
+        {Put:{TableName:tableName,Item:{pk:`USER#${v.id}`,sk:`USER#${v.id}`,gsi1pk:`USERNAME#${v.username.toLowerCase()}`,gsi1sk:`USERNAME#${v.username.toLowerCase()}`,...v},ConditionExpression:'attribute_not_exists(pk)'}},
+        {Put:{TableName:tableName,Item:{pk:`USER#${v.id}`,sk:'PASSWORD',hash:passwordHash}}},
+        {Put:{TableName:tableName,Item:{pk:`USERNAME#${v.username.toLowerCase()}`,sk:`USERNAME#${v.username.toLowerCase()}`,userId:v.id},ConditionExpression:'attribute_not_exists(pk)'}},
+        ...(email?[{Put:{TableName:tableName,Item:{pk:`EMAIL#${email}`,sk:`EMAIL#${email}`,userId:v.id},ConditionExpression:'attribute_not_exists(pk)'}}]:[]),
+      ]}));
+      return true;
+    }catch(e){if(e instanceof Error&&e.name==='TransactionCanceledException'&&/ConditionalCheckFailed/.test(e.message))return false;throw e}
+  },
   async userById(id:string):Promise<AutoVisionUser|null>{
     await ensureTable();
     const r=await client.send(new GetCommand({TableName:tableName,Key:{pk:`USER#${id}`,sk:`USER#${id}`}}));
@@ -184,6 +202,7 @@ export const dynamoStore={
     if(!existing.Item)return false;
     await client.send(new DeleteCommand({TableName:tableName,Key:{pk:`USER#${id}`,sk:`USER#${id}`}}));
     await client.send(new DeleteCommand({TableName:tableName,Key:{pk:`USER#${id}`,sk:'PASSWORD'}}));
+    for(const value of [existing.Item.email?'EMAIL#'+String(existing.Item.email).toLowerCase():null,'USERNAME#'+String(existing.Item.username).toLowerCase()])if(value)await client.send(new DeleteCommand({TableName:tableName,Key:{pk:value,sk:value},ConditionExpression:'userId=:id',ExpressionAttributeValues:{':id':id}})).catch(e=>{if(!(e instanceof Error&&e.name==='ConditionalCheckFailedException'))throw e;});
     return true;
   },
   async settings(tenant:string):Promise<Settings>{

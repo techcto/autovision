@@ -48,12 +48,16 @@
     "StripeSecretKey": {
       "Type": "String",
       "NoEcho": true,
-      "Default": ""
+      "Default": "",
+      "AllowedPattern": "^$|^(sk|rk)_(live|test)_[a-zA-Z0-9]+$",
+      "Description": "Optional initial Stripe secret key. Stored in a retained Secrets Manager secret, never a task definition environment value. Prefer an existing secret ARN for enterprise installs."
     },
     "StripeWebhookSecret": {
       "Type": "String",
       "NoEcho": true,
-      "Default": ""
+      "Default": "",
+      "AllowedPattern": "^$|^whsec_[a-zA-Z0-9]+$",
+      "Description": "Stripe webhook signing secret paired with StripeSecretKey. Stored in Secrets Manager."
     },
     "StripeStarterPriceId": {
       "Type": "String",
@@ -63,13 +67,34 @@
       "Type": "String",
       "Default": ""
     },
-    "StripeImageOveragePriceId": {"Type": "String", "Default": "", "Description": "Metered per-image overage price on autovision_image_units_v1 (setup-plans.mjs). Must be from the same Stripe mode as StripeSecretKey."},
-    "StripeAIOveragePriceId": {"Type": "String", "Default": "", "Description": "Optional metered AI credit overage price on autovision_ai_credits_v1."},
-    "UsageExport": {"Type": "String", "Default": "disabled", "AllowedValues": ["disabled", "enabled"], "Description": "Enable opted-in overage and Stripe meter export (SaaS). Keep disabled until overage prices, credit weights and customer terms are approved and tested in Stripe test mode."},
-    "AICreditWeights": {"Type": "String", "Default": "", "Description": "Optional versioned AI credit weights JSON with included_credits per plan. Empty leaves AI usage unpriced and unbilled."},
+    "StripeImageOveragePriceId": {
+      "Type": "String",
+      "Default": "",
+      "Description": "Metered per-image overage price on autovision_image_units_v1 (setup-plans.mjs). Must be from the same Stripe mode as StripeSecretKey."
+    },
+    "StripeAIOveragePriceId": {
+      "Type": "String",
+      "Default": "",
+      "Description": "Optional metered AI credit overage price on autovision_ai_credits_v1."
+    },
+    "UsageExport": {
+      "Type": "String",
+      "Default": "disabled",
+      "AllowedValues": [
+        "disabled",
+        "enabled"
+      ],
+      "Description": "Enable opted-in overage and Stripe meter export (SaaS). Keep disabled until overage prices, credit weights and customer terms are approved and tested in Stripe test mode."
+    },
+    "AICreditWeights": {
+      "Type": "String",
+      "Default": "",
+      "Description": "Optional versioned AI credit weights JSON with included_credits per plan. Empty leaves AI usage unpriced and unbilled."
+    },
     "SesFrom": {
       "Type": "String",
-      "Default": ""
+      "Default": "",
+      "Description": "SES-verified sender in the deployment region. Required for SaaS verification, e.g. noreply@autovision.dev."
     },
     "WhatsappOriginationId": {
       "Type": "String",
@@ -104,7 +129,11 @@
       "MinValue": 1,
       "MaxValue": 49999
     },
-    "AIModelRegistry": {"Type": "String", "Default": "", "Description": "Optional operator-approved AI model registry JSON. Verify image/tool support, region, cost and IAM separately; does not provision model access."},
+    "AIModelRegistry": {
+      "Type": "String",
+      "Default": "",
+      "Description": "Optional operator-approved AI model registry JSON. Verify image/tool support, region, cost and IAM separately; does not provision model access."
+    },
     "BedrockModelId": {
       "Type": "String",
       "Default": "",
@@ -188,6 +217,48 @@
       "Default": "",
       "AllowedPattern": "^$|^https?://[A-Za-z0-9.-]+(:[0-9]{1,5})?$",
       "Description": "Private base URL of a verified COOL service implementing /analyze and /detect. Restrict network access to app task security groups. Required only for cool."
+    },
+    "StripeCredentialsSecretArn": {
+      "Type": "String",
+      "Default": "",
+      "AllowedPattern": "^$|^arn:aws[a-z-]*:secretsmanager:[a-z0-9-]+:[0-9]{12}:secret:[a-zA-Z0-9/_+=.@-]+$",
+      "Description": "Optional existing same-account, same-region Stripe JSON secret ARN. Keys: secret_key and webhook_secret. Leave raw Stripe parameters empty when supplied."
+    },
+    "StripeCredentialsKmsKeyArn": {
+      "Type": "String",
+      "Default": "",
+      "AllowedPattern": "^$|^arn:aws[a-z-]*:kms:[a-z0-9-]+:[0-9]{12}:key/[a-zA-Z0-9-]+$",
+      "Description": "Optional customer-managed KMS key ARN for the Stripe secret. Key policy must permit the task execution role to decrypt."
+    },
+    "StripeCredentialsRevision": {
+      "Type": "String",
+      "Default": "1",
+      "AllowedPattern": "[a-zA-Z0-9.-]+",
+      "Description": "Increment after rotating Stripe credentials to roll tasks through a reviewed CloudFormation change set."
+    },
+    "CoreSecretsKmsKeyArn": {
+      "Type": "String",
+      "Default": "",
+      "AllowedPattern": "^$|^arn:aws[a-z-]*:kms:[a-z0-9-]+:[0-9]{12}:key/[a-zA-Z0-9-]+$",
+      "Description": "Optional customer-managed KMS key for root, session and provider secrets. Key policy must permit the execution role to decrypt."
+    },
+    "CoreSecretsRevision": {
+      "Type": "String",
+      "Default": "1",
+      "AllowedPattern": "[a-zA-Z0-9.-]+",
+      "Description": "Increment after changing root or session secrets to roll tasks through a reviewed CloudFormation change set."
+    },
+    "PublicOrigin": {
+      "Type": "String",
+      "Default": "",
+      "AllowedPattern": "^$|^https://[a-zA-Z0-9.-]+(?::[0-9]+)?$",
+      "Description": "Canonical HTTPS site origin for verification/password-reset links. Required in SaaS mode, e.g. https://autovision.dev."
+    },
+    "BlockedSignupDomains": {
+      "Type": "String",
+      "Default": "",
+      "MaxLength": 2048,
+      "Description": "Optional comma-separated domains blocked for new accounts, e.g. gmail.com,googlemail.com. Empty allows all domains."
     }
   },
   "Resources": {
@@ -374,6 +445,138 @@
           {
             "Fn::Sub": "arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
           }
+        ],
+        "Policies": [
+          {
+            "Fn::If": [
+              "UseStripeCredentials",
+              {
+                "PolicyName": "stripe-credentials-read",
+                "PolicyDocument": {
+                  "Version": "2012-10-17",
+                  "Statement": [
+                    {
+                      "Effect": "Allow",
+                      "Action": "secretsmanager:GetSecretValue",
+                      "Resource": {
+                        "Fn::If": [
+                          "UseExternalStripeSecret",
+                          {
+                            "Ref": "StripeCredentialsSecretArn"
+                          },
+                          {
+                            "Ref": "StripeCredentials"
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "Ref": "AWS::NoValue"
+              }
+            ]
+          },
+          {
+            "Fn::If": [
+              "UseStripeKmsAccess",
+              {
+                "PolicyName": "stripe-key-decrypt",
+                "PolicyDocument": {
+                  "Version": "2012-10-17",
+                  "Statement": [
+                    {
+                      "Effect": "Allow",
+                      "Action": "kms:Decrypt",
+                      "Resource": {
+                        "Ref": "StripeCredentialsKmsKeyArn"
+                      },
+                      "Condition": {
+                        "StringEquals": {
+                          "kms:ViaService": {
+                            "Fn::Sub": "secretsmanager.${AWS::Region}.${AWS::URLSuffix}"
+                          },
+                          "kms:EncryptionContext:SecretARN": {
+                            "Fn::If": [
+                              "UseExternalStripeSecret",
+                              {
+                                "Ref": "StripeCredentialsSecretArn"
+                              },
+                              {
+                                "Ref": "StripeCredentials"
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "Ref": "AWS::NoValue"
+              }
+            ]
+          },
+          {
+            "PolicyName": "core-secrets-read",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": "secretsmanager:GetSecretValue",
+                  "Resource": [
+                    {
+                      "Ref": "RootPasswordSecret"
+                    },
+                    {
+                      "Ref": "SessionSigningSecret"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "Fn::If": [
+              "UseCoreSecretsKmsKey",
+              {
+                "PolicyName": "core-secrets-decrypt",
+                "PolicyDocument": {
+                  "Version": "2012-10-17",
+                  "Statement": [
+                    {
+                      "Effect": "Allow",
+                      "Action": "kms:Decrypt",
+                      "Resource": {
+                        "Ref": "CoreSecretsKmsKeyArn"
+                      },
+                      "Condition": {
+                        "StringEquals": {
+                          "kms:ViaService": {
+                            "Fn::Sub": "secretsmanager.${AWS::Region}.${AWS::URLSuffix}"
+                          },
+                          "kms:EncryptionContext:SecretARN": [
+                            {
+                              "Ref": "RootPasswordSecret"
+                            },
+                            {
+                              "Ref": "SessionSigningSecret"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "Ref": "AWS::NoValue"
+              }
+            ]
+          }
         ]
       }
     },
@@ -533,18 +736,6 @@
                 }
               },
               {
-                "Name": "AUTOVISION_ROOT_PASSWORD",
-                "Value": {
-                  "Ref": "RootPassword"
-                }
-              },
-              {
-                "Name": "AUTOVISION_SESSION_SECRET",
-                "Value": {
-                  "Ref": "SessionSecret"
-                }
-              },
-              {
                 "Name": "AUTOVISION_QUEUE_URL",
                 "Value": {
                   "Ref": "Queue"
@@ -569,18 +760,6 @@
                     "Ref": "AWS::NoValue"
                   }
                 ]
-              },
-              {
-                "Name": "STRIPE_SECRET_KEY",
-                "Value": {
-                  "Ref": "StripeSecretKey"
-                }
-              },
-              {
-                "Name": "STRIPE_WEBHOOK_SECRET",
-                "Value": {
-                  "Ref": "StripeWebhookSecret"
-                }
               },
               {
                 "Name": "STRIPE_STARTER_PRICE_ID",
@@ -658,7 +837,9 @@
               },
               {
                 "Name": "AUTOVISION_AI_MODELS_JSON",
-                "Value": {"Ref": "AIModelRegistry"}
+                "Value": {
+                  "Ref": "AIModelRegistry"
+                }
               },
               {
                 "Name": "AUTOVISION_VISION_MODEL_ID",
@@ -703,6 +884,30 @@
                 "Value": {
                   "Ref": "VisionBackend"
                 }
+              },
+              {
+                "Name": "AUTOVISION_PUBLIC_ORIGIN",
+                "Value": {
+                  "Ref": "PublicOrigin"
+                }
+              },
+              {
+                "Name": "AUTOVISION_BLOCKED_SIGNUP_DOMAINS",
+                "Value": {
+                  "Ref": "BlockedSignupDomains"
+                }
+              },
+              {
+                "Name": "AUTOVISION_CORE_SECRETS_REVISION",
+                "Value": {
+                  "Ref": "CoreSecretsRevision"
+                }
+              },
+              {
+                "Name": "AUTOVISION_STRIPE_CREDENTIALS_REVISION",
+                "Value": {
+                  "Ref": "StripeCredentialsRevision"
+                }
               }
             ],
             "LogConfiguration": {
@@ -716,7 +921,81 @@
                 },
                 "awslogs-stream-prefix": "web"
               }
-            }
+            },
+            "Secrets": [
+              {
+                "Fn::If": [
+                  "UseStripeCredentials",
+                  {
+                    "Name": "STRIPE_SECRET_KEY",
+                    "ValueFrom": {
+                      "Fn::Join": [
+                        "",
+                        [
+                          {
+                            "Fn::If": [
+                              "UseExternalStripeSecret",
+                              {
+                                "Ref": "StripeCredentialsSecretArn"
+                              },
+                              {
+                                "Ref": "StripeCredentials"
+                              }
+                            ]
+                          },
+                          ":secret_key::"
+                        ]
+                      ]
+                    }
+                  },
+                  {
+                    "Ref": "AWS::NoValue"
+                  }
+                ]
+              },
+              {
+                "Fn::If": [
+                  "UseStripeCredentials",
+                  {
+                    "Name": "STRIPE_WEBHOOK_SECRET",
+                    "ValueFrom": {
+                      "Fn::Join": [
+                        "",
+                        [
+                          {
+                            "Fn::If": [
+                              "UseExternalStripeSecret",
+                              {
+                                "Ref": "StripeCredentialsSecretArn"
+                              },
+                              {
+                                "Ref": "StripeCredentials"
+                              }
+                            ]
+                          },
+                          ":webhook_secret::"
+                        ]
+                      ]
+                    }
+                  },
+                  {
+                    "Ref": "AWS::NoValue"
+                  }
+                ]
+              },
+              {
+                "Name": "AUTOVISION_ROOT_PASSWORD",
+                "ValueFrom": {
+                  "Ref": "RootPasswordSecret"
+                }
+              },
+              {
+                "Name": "AUTOVISION_SESSION_SECRET",
+                "ValueFrom": {
+                  "Ref": "SessionSigningSecret"
+                }
+              }
+            ]
           }
         ]
       }
@@ -757,7 +1036,8 @@
               "Ref": "WebTarget"
             }
           }
-        ]
+        ],
+        "PlatformVersion": "1.4.0"
       }
     },
     "ApiTask": {
@@ -817,18 +1097,6 @@
                 }
               },
               {
-                "Name": "AUTOVISION_ROOT_PASSWORD",
-                "Value": {
-                  "Ref": "RootPassword"
-                }
-              },
-              {
-                "Name": "AUTOVISION_SESSION_SECRET",
-                "Value": {
-                  "Ref": "SessionSecret"
-                }
-              },
-              {
                 "Name": "AUTOVISION_QUEUE_URL",
                 "Value": {
                   "Ref": "Queue"
@@ -853,18 +1121,6 @@
                     "Ref": "AWS::NoValue"
                   }
                 ]
-              },
-              {
-                "Name": "STRIPE_SECRET_KEY",
-                "Value": {
-                  "Ref": "StripeSecretKey"
-                }
-              },
-              {
-                "Name": "STRIPE_WEBHOOK_SECRET",
-                "Value": {
-                  "Ref": "StripeWebhookSecret"
-                }
               },
               {
                 "Name": "STRIPE_STARTER_PRICE_ID",
@@ -948,7 +1204,9 @@
               },
               {
                 "Name": "AUTOVISION_AI_MODELS_JSON",
-                "Value": {"Ref": "AIModelRegistry"}
+                "Value": {
+                  "Ref": "AIModelRegistry"
+                }
               },
               {
                 "Name": "AUTOVISION_VISION_MODEL_ID",
@@ -981,6 +1239,30 @@
                 "Value": {
                   "Ref": "VisionBackend"
                 }
+              },
+              {
+                "Name": "AUTOVISION_PUBLIC_ORIGIN",
+                "Value": {
+                  "Ref": "PublicOrigin"
+                }
+              },
+              {
+                "Name": "AUTOVISION_BLOCKED_SIGNUP_DOMAINS",
+                "Value": {
+                  "Ref": "BlockedSignupDomains"
+                }
+              },
+              {
+                "Name": "AUTOVISION_CORE_SECRETS_REVISION",
+                "Value": {
+                  "Ref": "CoreSecretsRevision"
+                }
+              },
+              {
+                "Name": "AUTOVISION_STRIPE_CREDENTIALS_REVISION",
+                "Value": {
+                  "Ref": "StripeCredentialsRevision"
+                }
               }
             ],
             "LogConfiguration": {
@@ -994,7 +1276,81 @@
                 },
                 "awslogs-stream-prefix": "api"
               }
-            }
+            },
+            "Secrets": [
+              {
+                "Fn::If": [
+                  "UseStripeCredentials",
+                  {
+                    "Name": "STRIPE_SECRET_KEY",
+                    "ValueFrom": {
+                      "Fn::Join": [
+                        "",
+                        [
+                          {
+                            "Fn::If": [
+                              "UseExternalStripeSecret",
+                              {
+                                "Ref": "StripeCredentialsSecretArn"
+                              },
+                              {
+                                "Ref": "StripeCredentials"
+                              }
+                            ]
+                          },
+                          ":secret_key::"
+                        ]
+                      ]
+                    }
+                  },
+                  {
+                    "Ref": "AWS::NoValue"
+                  }
+                ]
+              },
+              {
+                "Fn::If": [
+                  "UseStripeCredentials",
+                  {
+                    "Name": "STRIPE_WEBHOOK_SECRET",
+                    "ValueFrom": {
+                      "Fn::Join": [
+                        "",
+                        [
+                          {
+                            "Fn::If": [
+                              "UseExternalStripeSecret",
+                              {
+                                "Ref": "StripeCredentialsSecretArn"
+                              },
+                              {
+                                "Ref": "StripeCredentials"
+                              }
+                            ]
+                          },
+                          ":webhook_secret::"
+                        ]
+                      ]
+                    }
+                  },
+                  {
+                    "Ref": "AWS::NoValue"
+                  }
+                ]
+              },
+              {
+                "Name": "AUTOVISION_ROOT_PASSWORD",
+                "ValueFrom": {
+                  "Ref": "RootPasswordSecret"
+                }
+              },
+              {
+                "Name": "AUTOVISION_SESSION_SECRET",
+                "ValueFrom": {
+                  "Ref": "SessionSigningSecret"
+                }
+              }
+            ]
           },
           {
             "Fn::If": [
@@ -1067,7 +1423,8 @@
               "Ref": "ApiTarget"
             }
           }
-        ]
+        ],
+        "PlatformVersion": "1.4.0"
       }
     },
     "WorkerTask": {
@@ -1122,18 +1479,6 @@
                 }
               },
               {
-                "Name": "AUTOVISION_ROOT_PASSWORD",
-                "Value": {
-                  "Ref": "RootPassword"
-                }
-              },
-              {
-                "Name": "AUTOVISION_SESSION_SECRET",
-                "Value": {
-                  "Ref": "SessionSecret"
-                }
-              },
-              {
                 "Name": "AUTOVISION_QUEUE_URL",
                 "Value": {
                   "Ref": "Queue"
@@ -1158,18 +1503,6 @@
                     "Ref": "AWS::NoValue"
                   }
                 ]
-              },
-              {
-                "Name": "STRIPE_SECRET_KEY",
-                "Value": {
-                  "Ref": "StripeSecretKey"
-                }
-              },
-              {
-                "Name": "STRIPE_WEBHOOK_SECRET",
-                "Value": {
-                  "Ref": "StripeWebhookSecret"
-                }
               },
               {
                 "Name": "STRIPE_STARTER_PRICE_ID",
@@ -1252,6 +1585,30 @@
                 "Value": {
                   "Ref": "VisionBackend"
                 }
+              },
+              {
+                "Name": "AUTOVISION_PUBLIC_ORIGIN",
+                "Value": {
+                  "Ref": "PublicOrigin"
+                }
+              },
+              {
+                "Name": "AUTOVISION_BLOCKED_SIGNUP_DOMAINS",
+                "Value": {
+                  "Ref": "BlockedSignupDomains"
+                }
+              },
+              {
+                "Name": "AUTOVISION_CORE_SECRETS_REVISION",
+                "Value": {
+                  "Ref": "CoreSecretsRevision"
+                }
+              },
+              {
+                "Name": "AUTOVISION_STRIPE_CREDENTIALS_REVISION",
+                "Value": {
+                  "Ref": "StripeCredentialsRevision"
+                }
               }
             ],
             "LogConfiguration": {
@@ -1265,7 +1622,81 @@
                 },
                 "awslogs-stream-prefix": "worker"
               }
-            }
+            },
+            "Secrets": [
+              {
+                "Fn::If": [
+                  "UseStripeCredentials",
+                  {
+                    "Name": "STRIPE_SECRET_KEY",
+                    "ValueFrom": {
+                      "Fn::Join": [
+                        "",
+                        [
+                          {
+                            "Fn::If": [
+                              "UseExternalStripeSecret",
+                              {
+                                "Ref": "StripeCredentialsSecretArn"
+                              },
+                              {
+                                "Ref": "StripeCredentials"
+                              }
+                            ]
+                          },
+                          ":secret_key::"
+                        ]
+                      ]
+                    }
+                  },
+                  {
+                    "Ref": "AWS::NoValue"
+                  }
+                ]
+              },
+              {
+                "Fn::If": [
+                  "UseStripeCredentials",
+                  {
+                    "Name": "STRIPE_WEBHOOK_SECRET",
+                    "ValueFrom": {
+                      "Fn::Join": [
+                        "",
+                        [
+                          {
+                            "Fn::If": [
+                              "UseExternalStripeSecret",
+                              {
+                                "Ref": "StripeCredentialsSecretArn"
+                              },
+                              {
+                                "Ref": "StripeCredentials"
+                              }
+                            ]
+                          },
+                          ":webhook_secret::"
+                        ]
+                      ]
+                    }
+                  },
+                  {
+                    "Ref": "AWS::NoValue"
+                  }
+                ]
+              },
+              {
+                "Name": "AUTOVISION_ROOT_PASSWORD",
+                "ValueFrom": {
+                  "Ref": "RootPasswordSecret"
+                }
+              },
+              {
+                "Name": "AUTOVISION_SESSION_SECRET",
+                "ValueFrom": {
+                  "Ref": "SessionSigningSecret"
+                }
+              }
+            ]
           },
           {
             "Fn::If": [
@@ -1327,7 +1758,8 @@
               }
             ]
           }
-        }
+        },
+        "PlatformVersion": "1.4.0"
       }
     },
     "WebListenerRule": {
@@ -1576,6 +2008,79 @@
           ]
         }
       }
+    },
+    "StripeCredentials": {
+      "Type": "AWS::SecretsManager::Secret",
+      "Condition": "CreateStripeSecret",
+      "DeletionPolicy": "RetainExceptOnCreate",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "Description": {
+          "Fn::Sub": "${AWS::StackName} Stripe credentials; separate live and sandbox deployments"
+        },
+        "KmsKeyId": {
+          "Fn::If": [
+            "UseStripeKmsKey",
+            {
+              "Ref": "StripeCredentialsKmsKeyArn"
+            },
+            {
+              "Ref": "AWS::NoValue"
+            }
+          ]
+        },
+        "SecretString": {
+          "Fn::Sub": "{\"secret_key\":\"${StripeSecretKey}\",\"webhook_secret\":\"${StripeWebhookSecret}\"}"
+        }
+      }
+    },
+    "RootPasswordSecret": {
+      "Type": "AWS::SecretsManager::Secret",
+      "DeletionPolicy": "RetainExceptOnCreate",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "Description": {
+          "Fn::Sub": "${AWS::StackName} RootPassword; preserve value during migration"
+        },
+        "KmsKeyId": {
+          "Fn::If": [
+            "UseCoreSecretsKmsKey",
+            {
+              "Ref": "CoreSecretsKmsKeyArn"
+            },
+            {
+              "Ref": "AWS::NoValue"
+            }
+          ]
+        },
+        "SecretString": {
+          "Ref": "RootPassword"
+        }
+      }
+    },
+    "SessionSigningSecret": {
+      "Type": "AWS::SecretsManager::Secret",
+      "DeletionPolicy": "RetainExceptOnCreate",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "Description": {
+          "Fn::Sub": "${AWS::StackName} SessionSecret; preserve value during migration"
+        },
+        "KmsKeyId": {
+          "Fn::If": [
+            "UseCoreSecretsKmsKey",
+            {
+              "Ref": "CoreSecretsKmsKeyArn"
+            },
+            {
+              "Ref": "AWS::NoValue"
+            }
+          ]
+        },
+        "SecretString": {
+          "Ref": "SessionSecret"
+        }
+      }
     }
   },
   "Outputs": {
@@ -1609,6 +2114,33 @@
       "Description": "Requested backend; COOL mode requires separately verified licensed Arm workload.",
       "Value": {
         "Ref": "VisionBackend"
+      }
+    },
+    "StripeCredentialsSecretArn": {
+      "Condition": "UseStripeCredentials",
+      "Description": "Stripe secret ARN only; values are never output.",
+      "Value": {
+        "Fn::If": [
+          "UseExternalStripeSecret",
+          {
+            "Ref": "StripeCredentialsSecretArn"
+          },
+          {
+            "Ref": "StripeCredentials"
+          }
+        ]
+      }
+    },
+    "RootPasswordSecretArn": {
+      "Description": "Secret ARN only; never the credential value.",
+      "Value": {
+        "Ref": "RootPasswordSecret"
+      }
+    },
+    "SessionSigningSecretArn": {
+      "Description": "Secret ARN only; never the credential value.",
+      "Value": {
+        "Ref": "SessionSigningSecret"
       }
     }
   },
@@ -1671,6 +2203,138 @@
           "Ref": "VisionBackend"
         },
         "cool"
+      ]
+    },
+    "UseExternalStripeSecret": {
+      "Fn::Not": [
+        {
+          "Fn::Equals": [
+            {
+              "Ref": "StripeCredentialsSecretArn"
+            },
+            ""
+          ]
+        }
+      ]
+    },
+    "CreateStripeSecret": {
+      "Fn::And": [
+        {
+          "Fn::Equals": [
+            {
+              "Ref": "StripeCredentialsSecretArn"
+            },
+            ""
+          ]
+        },
+        {
+          "Fn::Not": [
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "StripeSecretKey"
+                },
+                ""
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "UseStripeCredentials": {
+      "Fn::Or": [
+        {
+          "Fn::Not": [
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "StripeCredentialsSecretArn"
+                },
+                ""
+              ]
+            }
+          ]
+        },
+        {
+          "Fn::Not": [
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "StripeSecretKey"
+                },
+                ""
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "UseStripeKmsKey": {
+      "Fn::Not": [
+        {
+          "Fn::Equals": [
+            {
+              "Ref": "StripeCredentialsKmsKeyArn"
+            },
+            ""
+          ]
+        }
+      ]
+    },
+    "UseStripeKmsAccess": {
+      "Fn::And": [
+        {
+          "Fn::Not": [
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "StripeCredentialsKmsKeyArn"
+                },
+                ""
+              ]
+            }
+          ]
+        },
+        {
+          "Fn::Or": [
+            {
+              "Fn::Not": [
+                {
+                  "Fn::Equals": [
+                    {
+                      "Ref": "StripeCredentialsSecretArn"
+                    },
+                    ""
+                  ]
+                }
+              ]
+            },
+            {
+              "Fn::Not": [
+                {
+                  "Fn::Equals": [
+                    {
+                      "Ref": "StripeSecretKey"
+                    },
+                    ""
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "UseCoreSecretsKmsKey": {
+      "Fn::Not": [
+        {
+          "Fn::Equals": [
+            {
+              "Ref": "CoreSecretsKmsKeyArn"
+            },
+            ""
+          ]
+        }
       ]
     }
   },
@@ -1745,6 +2409,115 @@
             ]
           },
           "AssertDescription": "Supply the licensed COOL/Graviton service private endpoint when VisionBackend=cool."
+        }
+      ]
+    },
+    "StripeCredentialSource": {
+      "Assertions": [
+        {
+          "Assert": {
+            "Fn::Or": [
+              {
+                "Fn::And": [
+                  {
+                    "Fn::Equals": [
+                      {
+                        "Ref": "StripeSecretKey"
+                      },
+                      ""
+                    ]
+                  },
+                  {
+                    "Fn::Equals": [
+                      {
+                        "Ref": "StripeWebhookSecret"
+                      },
+                      ""
+                    ]
+                  }
+                ]
+              },
+              {
+                "Fn::And": [
+                  {
+                    "Fn::Equals": [
+                      {
+                        "Ref": "StripeCredentialsSecretArn"
+                      },
+                      ""
+                    ]
+                  },
+                  {
+                    "Fn::Not": [
+                      {
+                        "Fn::Equals": [
+                          {
+                            "Ref": "StripeSecretKey"
+                          },
+                          ""
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "Fn::Not": [
+                      {
+                        "Fn::Equals": [
+                          {
+                            "Ref": "StripeWebhookSecret"
+                          },
+                          ""
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "AssertDescription": "Supply both raw Stripe credentials or an existing secret ARN, never partial credentials or both sources."
+        }
+      ]
+    },
+    "SaasEmailSenderRequired": {
+      "RuleCondition": {
+        "Fn::Equals": [
+          {
+            "Ref": "DeploymentMode"
+          },
+          "saas"
+        ]
+      },
+      "Assertions": [
+        {
+          "Assert": {
+            "Fn::Not": [
+              {
+                "Fn::Equals": [
+                  {
+                    "Ref": "SesFrom"
+                  },
+                  ""
+                ]
+              }
+            ]
+          },
+          "AssertDescription": "SaaS mode requires an SES-verified sender for account verification."
+        },
+        {
+          "Assert": {
+            "Fn::Not": [
+              {
+                "Fn::Equals": [
+                  {
+                    "Ref": "PublicOrigin"
+                  },
+                  ""
+                ]
+              }
+            ]
+          },
+          "AssertDescription": "SaaS mode requires a canonical HTTPS origin for authentication emails."
         }
       ]
     }

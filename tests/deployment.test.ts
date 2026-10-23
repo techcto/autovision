@@ -38,7 +38,10 @@ for (const name of ["autovision", "autovision-existing"]) {
     assert.equal(t.Parameters.StripeSecretKey.NoEcho, true);
     for (const task of ["WebTask", "ApiTask", "WorkerTask"]) {
       const env = t.Resources[task].Properties.ContainerDefinitions[0].Environment.map((e: {Name: string}) => e.Name);
-      for (const v of ["AUTOVISION_USAGE_EXPORT", "AUTOVISION_AI_CREDIT_WEIGHTS_JSON", "STRIPE_IMAGE_OVERAGE_PRICE_ID", "STRIPE_AI_OVERAGE_PRICE_ID", "STRIPE_SECRET_KEY"]) assert.ok(env.includes(v), task + " " + v);
+      for (const v of ["AUTOVISION_USAGE_EXPORT", "AUTOVISION_AI_CREDIT_WEIGHTS_JSON", "STRIPE_IMAGE_OVERAGE_PRICE_ID", "STRIPE_AI_OVERAGE_PRICE_ID"]) assert.ok(env.includes(v), task + " " + v);
+      assert.ok(!env.includes('STRIPE_SECRET_KEY'), 'Stripe key must not be a plaintext task environment value');
+      const secrets=t.Resources[task].Properties.ContainerDefinitions[0].Secrets;
+      assert.ok(secrets.some((value:{'Fn::If'?:[string,{Name:string},unknown]})=>value['Fn::If']?.[1]?.Name==='STRIPE_SECRET_KEY'));
     }
   });
 }

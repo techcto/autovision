@@ -12,7 +12,70 @@ Use `autovision.yaml` to create an ALB and ECS cluster in an existing VPC. Use `
 
 Select `DeploymentMode=saas` for hosted workspaces and Stripe billing or `on-premise` for a private installation. Set root credentials and a random session secret at launch. Supply an ACM certificate and configure DNS for HTTPS. The existing-listener template expects you to provide an HTTPS listener.
 
-Example parameters contain placeholders only. Do not commit filled parameter files. Create a reviewed change set with `aws cloudformation create-change-set --stack-name autovision-test --change-set-name initial-install --change-set-type CREATE --template-body file://devops/cloudformation/autovision.yaml --parameters file://your-private.parameters.json --capabilities CAPABILITY_IAM`. Wait for creation, inspect it with `describe-change-set`, and execute only after reviewing resources, IAM changes and replacements. Update and delete applications through CloudFormation, not manual resource operations.
+Example parameters contain placeholders only. Do not commit filled parameter files. The formatted templates exceed the inline CloudFormation size limit; use the release's published HTTPS S3 template URL. Create a reviewed change set with `aws cloudformation create-change-set --stack-name autovision-test --change-set-name initial-install --change-set-type CREATE --template-url YOUR_PUBLISHED_HTTPS_S3_TEMPLATE_URL --parameters file://your-private.parameters.json --capabilities CAPABILITY_IAM`. Wait for creation, inspect it with `describe-change-set`, and execute only after reviewing resources, IAM changes and replacements. Update and delete applications through CloudFormation, not manual resource operations.
+
+## Credentials, SES and verified SaaS signup
+
+Both application templates store root bootstrap and session-signing values in
+separate Secrets Manager secrets. Stripe uses a JSON secret with `secret_key`
+and `webhook_secret`. ECS `Secrets` injects these values; task definitions and
+stack outputs contain only secret references. The execution role has read
+permission only for the selected credentials. Secrets use the AWS-managed key
+by default; optional `CoreSecretsKmsKeyArn` and `StripeCredentialsKmsKeyArn`
+support customer-managed keys with service/encryption-context-scoped decrypt
+permissions. The KMS key policy must also permit the execution role.
+
+For enterprise-owned Stripe credentials, set `StripeCredentialsSecretArn` to an
+existing same-account, same-region JSON secret and leave both raw Stripe
+parameters empty. Otherwise supply both NoEcho `StripeSecretKey` and
+`StripeWebhookSecret` and let the stack own the secret. Never supply a partial
+pair or both sources. Stripe price IDs and metering settings remain ordinary
+configuration; AutoVision pricing and usage-export behavior are unchanged.
+Never copy SmartDetector's Stripe account keys, webhook secret or price IDs.
+
+Preserve exact current `RootPassword` and `SessionSecret` values with
+`UsePreviousValue=true` when updating an existing stack. These resources use
+`RetainExceptOnCreate`: failed initial creation rolls back cleanly, while normal
+stack deletion retains secrets. `UpdateReplacePolicy=Retain` protects replaced
+resources. Historical task-definition revisions are not scrubbed by migration.
+
+Rotate stack-owned values through a reviewed CloudFormation change set. After
+updating credentials, increment `CoreSecretsRevision` or
+`StripeCredentialsRevision` to roll tasks and load the current secret version.
+Enterprise-owned secrets rotate through their owning stack/process, followed by
+the same application rollout. Changing a secret alone does not refresh running
+containers. Session rotation signs users out. RootPassword remains the launch
+operator credential. No automatic Stripe or application-key rotation is assumed.
+
+SaaS installs require `SesFrom` (e.g. `noreply@autovision.dev`) and
+`PublicOrigin=https://autovision.dev`. Use an SES-verified sender/domain in the
+deployment region and production SES access before sending to arbitrary users.
+Existing SES identity and DNS verification are prerequisites, not resources
+silently duplicated by these templates. Sending uses ECS task-role permissions,
+not static AWS access keys. Verify the AutoVision domain independently; a verified
+SmartDetector domain does not verify AutoVision. No email deliverability claim is
+made until a real verification email has been received and used successfully.
+
+New SaaS accounts require email, atomically claim it with their username, and
+cannot sign in until verification succeeds. Verification tokens expire after
+24 hours, are address-bound, and only the first successful verification starts
+a session. Resends have a per-account 25-minute cooldown. Shared DynamoDB limits
+signup to 20 requests and resend/enrollment to 10 requests per IP per 15 minutes.
+Canonical PublicOrigin prevents mail-link host spoofing. Production SaaS fails
+closed without real SES configuration and never exposes reset/verification links
+as JSON or uses local mock delivery as a signup bypass.
+
+Existing SaaS accounts without email sign in with their password to reach an
+email enrollment form, attach an unclaimed address and verify it. They are not
+silently marked verified or required to recreate their workspace. Admin-created
+SaaS users also need a verified email. Password resets target the stored email,
+not the username. Private/root login remains separate and does not require SES.
+No dummy users or seeded production data are introduced.
+
+`BlockedSignupDomains` defaults empty so Gmail and reviewer accounts remain
+allowed. To explicitly block Gmail, set `gmail.com,googlemail.com`; subdomains
+are blocked too. Email verification establishes inbox control, not proof that
+the applicant is human. Keep test keys/local `.env` separate from live secrets.
 
 Both modes provision DynamoDB, a private media bucket, SQS with a dead-letter queue, an EventBridge bus, IAM roles, and CloudWatch logs. Evidence buckets are retained on stack deletion. Web/API/worker run as separate ECS services. API and worker tasks contain the vision sidecar. ALB routes API and MCP requests to the API task.
 

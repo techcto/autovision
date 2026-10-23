@@ -10,6 +10,7 @@ const membershipKey=(orgId:string,userId:string)=>`${orgId}\0${userId}`;
 const MAX_EVENTS_PER_NODE=200;
 function slugify(name:string){return name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'')||randomUUID().slice(0,8)}
 export const memoryStore={
+  async claimUserEmail(id:string,email:string){const user=state.users.get(id);if(!user||user.email||user.status!=='active'||[...state.users.values()].some(v=>v.email?.toLowerCase()===email.toLowerCase()))return false;state.users.set(id,{...user,email,emailVerified:false,updatedAt:new Date().toISOString()});return true;},
   async createOrganization(v:{name:string;ownerId:string;orgType:OrgType;contactEmail?:string;contactPhone?:string}):Promise<Organization>{
     const org:Organization={id:randomUUID(),name:v.name,slug:`${slugify(v.name)}-${randomUUID().slice(0,6)}`,ownerId:v.ownerId,orgType:v.orgType,contactEmail:v.contactEmail,contactPhone:v.contactPhone,enrollmentToken:randomUUID(),createdAt:new Date().toISOString()};
     state.orgs.set(org.id,org);
@@ -54,6 +55,10 @@ export const memoryStore={
   async putEvent(v:AutoVisionEvent){const k=key(v.tenantId,v.serverId),list=state.events.get(k)??[];list.push(v);if(list.length>MAX_EVENTS_PER_NODE)list.shift();state.events.set(k,list)},
   async eventsForNode(tenant:string,serverId:string,limit=200){return(state.events.get(key(tenant,serverId))??[]).slice(-limit).reverse()},
   async userByName(username:string){return[...state.users.values()].find(x=>x.username.toLowerCase()===username.toLowerCase())??null},
+  async createUser(v:AutoVisionUser,passwordHash:string){if(state.users.has(v.id)||[...state.users.values()].some(u=>u.username.toLowerCase()===v.username.toLowerCase()||v.email&&u.email?.toLowerCase()===v.email.toLowerCase()))return false;state.users.set(v.id,v);state.passwords.set(v.id,passwordHash);return true},
+  async reserveVerificationEmail(id:string,email:string,sentAt:string,cutoff:string){const user=state.users.get(id);if(!user||user.email!==email||user.emailVerified===true||user.verificationSentAt&&user.verificationSentAt>cutoff)return false;state.users.set(id,{...user,verificationSentAt:sentAt});return true;},
+  async releaseVerificationEmail(id:string,sentAt:string){const user=state.users.get(id);if(user?.verificationSentAt===sentAt){const next={...user};delete next.verificationSentAt;state.users.set(id,next);}},
+  async verifyUserEmail(id:string,email:string){const user=state.users.get(id);if(!user||user.email!==email||user.emailVerified===true||user.status!=='active')return false;state.users.set(id,{...user,emailVerified:true,updatedAt:new Date().toISOString()});return true;},
   async userById(id:string){return state.users.get(id)??null},
   async putUser(v:AutoVisionUser,passwordHash?:string){state.users.set(v.id,v);if(passwordHash)state.passwords.set(v.id,passwordHash)},
   async password(id:string){return state.passwords.get(id)??null},

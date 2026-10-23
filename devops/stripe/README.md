@@ -1,5 +1,13 @@
 # Stripe setup
 
+AWS installs now load Stripe credentials through Secrets Manager in both
+CloudFormation templates. See [credentials and SES installation](../cloudformation/README.md#credentials-ses-and-verified-saas-signup)
+for stack-owned JSON credentials, an enterprise-owned secret ARN, optional KMS
+and rotation rollouts. Use AutoVision's own Stripe account, price IDs and webhook
+secret; never copy SmartDetector's credential values. Local development keeps
+sandbox keys in an uncommitted `.env`. `StripeCredentialsRevision` rolls tasks
+after rotation; updating the secret alone does not refresh running containers.
+
 Prepared plans match the existing app: Dev is free with 1,000 image units;
 Starter is $49/month with 10,000; Scale is $199/month with 100,000.
 Private installs do not use Stripe.
