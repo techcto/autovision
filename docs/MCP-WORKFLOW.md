@@ -2,6 +2,14 @@
 
 Connect `https://autovision.dev/mcp` with an organization API key using remote Streamable HTTP MCP. The [judge's guide](JUDGES_FIELD_GUIDE.md#featured-demo-give-your-favorite-agent-vision-through-mcp) contains setup and a demonstration prompt.
 
+## Signed-in console and saved jobs
+
+The console's Manual run drawer offers an explicit enhanced-inspection switch, initially reflecting the organization default. AI consent is required; turning off AI also turns off enhanced inspection for that run. The authenticated run endpoint supports SSE for the console and retains JSON responses for other clients.
+
+Manual runs stream the real perception, Decider, tool and recommendation steps into the main dashboard. New private jobs retain a bounded image-free event journal, including intermediate Decider choices, for review and animated replay in job details. Replay does not invoke models again. Older jobs are not retroactively reprocessed; jobs without inspection explain that no Decider ran.
+
+SmartDetector is a separate caller: it sends an explicit enhanced flag controlled by its own workspace privacy opt-in, overriding AutoVision's account default. It receives the shared engine's results regardless of whether the manual console streams its progress.
+
 ## Readable result, detailed evidence
 
 Analysis tools return a short text narrative of initial measurements, selected tools, rejected choices, follow-up evidence and the advisory review recommendation. Text does not serialize retained JPEG previews. Full measurements and the trace remain in `structuredContent` and private job history; clients may still choose to display that detailed JSON.

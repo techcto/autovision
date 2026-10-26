@@ -1,4 +1,6 @@
 import FrameReview from './frame-review';
+import SavedJobPipeline from '@/app/saved-job-pipeline';
+import type {PipelineEvent} from '@/lib/pipeline-events';
 import Link from 'next/link';
 import {cookies} from 'next/headers';
 import {notFound,redirect} from 'next/navigation';
@@ -22,6 +24,8 @@ export default async function JobDetails({params}:{params:Promise<{id:string}>})
     <Link href="/dashboard" className="av-detail-back">← All analysis jobs</Link>
     <header className="av-detail-header"><div><span className="av-kicker">ANALYSIS REPORT</span><h1>Visual intelligence, explained.</h1><p>Job <code>{job.id}</code></p></div><span className={'av-detail-status '+job.status}>{job.status}</span></header>
     <div className="av-detail-meta"><div><span>Started</span><strong>{new Date(job.createdAt).toISOString().replace('T',' ').replace('.000Z',' UTC')}</strong></div><div><span>{job.actor.kind==='user'?'Run by user':'API key'}</span><strong>{job.actor.label}</strong>{job.actor.kind==='api_key'&&<small>Key reference: {job.actor.id}</small>}</div><div><span>Source</span><strong>{job.source.toUpperCase()}</strong></div><div><span>Run time</span><strong>{job.durationMs===undefined?'—':(job.durationMs/1000).toFixed(1)+' seconds'}</strong></div></div>
+    {Array.isArray(result.pipeline_events)&&result.pipeline_events.length>0&&<SavedJobPipeline events={result.pipeline_events as PipelineEvent[]} status={job.status}/>}
+    {inspection?.status==='not_requested'&&<section className="av-detail-panel"><h2>Enhanced inspection was not requested</h2><p>This job ran initial analysis only, so no Decider or follow-up tools executed. Choose enhanced AI inspection for a new manual run, or enable the organization default in Settings. AI consent is required. Existing jobs are not retroactively reprocessed.</p><Link href="/settings">Review inspection settings →</Link></section>}
     {job.error&&<div className="av-detail-error" role="alert"><h2>Analysis could not complete</h2><p>{job.error}</p></div>}
     {job.status==='running'&&<p className="av-detail-notice">This job is still processing. Reload this page to see its latest results.</p>}
     <div className="av-detail-grid"><section className="av-detail-panel"><span className="av-kicker">RETAINED PREVIEW</span><h2>What we observed</h2><FrameReview frames={frames} thumbnail={job.thumbnail}/><div className="av-detail-stats"><div><strong>{job.frameCount}</strong><span>sampled image{job.frameCount===1?'':'s'}</span></div><div><strong>{metrics?.latency_ms===undefined?'—':Math.round(metrics.latency_ms)+' ms'}</strong><span>vision processing</span></div>{observations.map((o,i)=><div key={o.type+'-'+i}><strong>{o.type==='motion'?(o.value*100).toFixed(1)+'%':o.value}</strong><span>{o.type==='motion'?'peak pixel change':o.type==='person'?'maximum person detections':o.type}</span></div>)}</div></section>

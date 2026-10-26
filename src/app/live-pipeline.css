@@ -10,6 +10,11 @@
 .av-live-pipeline-steps>li>button[aria-current=step]{background:#eaf3ff;border-color:#adc9e9}
 .av-live-pipeline-steps>li>button>span:first-child{color:#147648}
 .av-live-pipeline-steps>li[data-status=running]>button>span:first-child{color:#c62843}
+.av-live-pipeline-steps>li[data-status=running]>button{border-left:4px solid #c62843}
+.av-live-pipeline-steps>li[data-status=running]>button>span:first-child{animation:av-step-pulse 1.2s ease-in-out infinite}
+.av-live-pipeline-steps>li[data-status=failed]>button{border-left:4px solid #bc3d28}
+@keyframes av-step-pulse{0%,100%{opacity:1}50%{opacity:.25}}
+@media(prefers-reduced-motion:reduce){.av-live-pipeline-steps>li[data-status=running]>button>span:first-child{animation:none}}
 .av-live-pipeline-steps strong{font-size:13px}
 .av-live-pipeline-steps small{display:block;color:#536479}
 .av-live-pipeline-evidence{min-width:0;padding:18px;background:white;border:1px solid #e0e6ed;border-radius:10px}

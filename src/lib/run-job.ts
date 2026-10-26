@@ -5,7 +5,7 @@ import {Actor,Job,newJob,saveJob} from './jobs';
 import {store} from './store';
 import {defaultInspection,type InspectionTool} from './inspection-config';
 import {checkToolArgs,executeInspectionTool,inspectAutonomously,type InspectionResult} from './autonomous-inspection';
-import type {PipelineContext} from './pipeline-events';
+import type {PipelineContext,PipelineEvent} from './pipeline-events';
 import {withUsageScope} from './usage-ledger';
 import {randomUUID} from 'node:crypto';
 export type ToolRequest={name:InspectionTool;args:Record<string,unknown>};
@@ -24,6 +24,16 @@ async function runMeteredJob(orgId:string,actor:Actor,source:Job['source'],input
   if(toolRequest?.name==='assess_scene'&&input.classify!==true)throw new MediaError('AI assessment requires explicit classify:true consent');
   if(!await consume(orgId,input.frames.length))throw new MediaError('Monthly image quota reached',429);
   const job={...newJob(orgId,actor,source,input.frames.length),usageRunId},start=Date.now();await saveJob(job);
+  const pipelineEvents:PipelineEvent[]=[],notify=context.onEvent;let pipelineBytes=0;
+  context={...context,onEvent:event=>{
+    if((event.type.startsWith('step.')||event.type==='run.started')&&pipelineEvents.length<64){
+      const safe=JSON.parse(JSON.stringify(event,(key,value)=>['preview','image','thumbnail','evidenceFrames'].includes(key)?undefined:value)) as PipelineEvent;
+      let retained={...safe,elapsed_ms:Date.now()-start};
+      if(Buffer.byteLength(JSON.stringify(retained))>8000||pipelineBytes+Buffer.byteLength(JSON.stringify(retained))>24000)retained={type:safe.type,step_id:safe.step_id,title:safe.title,summary:safe.summary,elapsed_ms:Date.now()-start};
+      const size=Buffer.byteLength(JSON.stringify(retained));if(pipelineBytes+size<=28000){pipelineEvents.push(retained);pipelineBytes+=size;}
+    }
+    notify?.(event);
+  }};
   try{
     context.onEvent?.({type:'run.started',job_id:job.id});
     context.onEvent?.({type:'step.started',step_id:'perception',title:'OpenCV 5 perception',summary:'Measuring supplied images; optional scene grounding follows consent.'});
@@ -43,10 +53,10 @@ async function runMeteredJob(orgId:string,actor:Actor,source:Job['source'],input
       if(region&&inspectionConfig.tools.includes('inspect_region'))next_steps.push('OpenCV object region available. Consider inspect_region with supplied frames and a non-Bedrock detection_index.');
       if(dark||region)next_steps.push('For bounded agent-led follow-up, consider inspect_scene after explicit approval to send images to configured Bedrock models. Additional quota and inference costs apply.');
     }
-    const result={...initial,inspection,next_steps,usage_run_id:usageRunId};const thumbnail=result.thumbnail as string|undefined;delete result.thumbnail;
+    const result={...initial,inspection,next_steps,pipeline_events:pipelineEvents,usage_run_id:usageRunId};const thumbnail=result.thumbnail as string|undefined;delete result.thumbnail;
     result.privacy={...result.privacy,sent_to_bedrock:result.privacy.sent_to_bedrock||inspection.images_sent_to_bedrock===true,job_retention_days:7,thumbnail_stored:!!thumbnail};
     await saveJob({...job,status:'complete',durationMs:Date.now()-start,thumbnail,result});
     const response={...result,job_id:job.id};context.onEvent?.({type:'run.completed',job_id:job.id,data:response});return response;
   }
-  catch(e){await saveJob({...job,status:'failed',durationMs:Date.now()-start,error:e instanceof MediaError?e.message:'Analysis failed'});throw e;}
+  catch(e){await saveJob({...job,status:'failed',durationMs:Date.now()-start,result:{pipeline_events:pipelineEvents},error:e instanceof MediaError?e.message:'Analysis failed'});throw e;}
 }
