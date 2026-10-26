@@ -29,9 +29,9 @@ The key demonstration is not a chatbot explaining a fixed detection. **OpenCV ev
 
 AutoVision stands alone. [SmartDetector](https://github.com/techcto/smartdetector) demonstrates a consuming application that supplies authorized camera samples and presents returned observations; Ring account linking and Fire TV presentation belong to SmartDetector, not the AutoVision service.
 
-### Special-award paths
+### Agentic Vision submission
 
-**Primary: Agentic Vision. Additional: Best Use of COOL.** Private AWS templates support `VisionBackend=cool` and `CoolVisionUrl` to route vision calls to a separately provisioned, licensed COOL service on AWS Graviton instead of the standard sidecars. This deployment option is implemented; it is not itself proof that COOL executed the workload or improved performance. See the [COOL evidence checklist](docs/JUDGES_FIELD_GUIDE.md#additional-award-path-cool-on-private-aws) and [backend configuration](devops/cloudformation/README.md#optional-cool-backend). Submit the actual COOL/Arm runtime evidence and reproducible baseline comparison for that award. The hosted standard backend must not be presented as COOL.
+**Award focus: Agentic Vision.** The [submission checklist and evidence map](docs/JUDGES_FIELD_GUIDE.md#submission-package-and-agentic-vision-evidence) links the workflow diagram, live traces, evaluation, failure handling, observability and human controls. COOL is not part of this award submission. Optional private-backend configuration is described in the [deployment guide](devops/cloudformation/README.md#optional-cool-backend); no COOL execution or acceleration is claimed.
 
 [Website](https://autovision.dev) · [Source](https://github.com/techcto/autovision) · [Deployment guide](devops/cloudformation/README.md)
 
@@ -281,7 +281,7 @@ Your app supplies images / sampled video
   → YOUR APP: human review, notification, or separately authorized action
 ```
 
-This is an implemented runtime loop, not a claim that an AI coding assistant built the project autonomously. Live Bedrock demonstrations and representative labeled-clip evaluation are still required before claiming evaluated agentic performance or award qualification. COOL/Graviton acceleration remains a separate verification task.
+This is an implemented runtime loop, not a claim that an AI coding assistant built the project autonomously. The [three-image live evaluation](docs/evaluation/README.md) records actual OpenCV/Bedrock execution, rejected-tool recovery and observed failures. It demonstrates the bounded workflow, not representative accuracy or award qualification. COOL is outside this submission.
 
 ### Enable enhanced inspection through REST or MCP
 

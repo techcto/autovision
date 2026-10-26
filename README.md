@@ -67,7 +67,7 @@ OpenCV performs decoding, frame differencing, brightness measurement, pinned YOL
 
 [AWS stack and design choices](docs/AWS-ARCHITECTURE.md) · [Agent workflow diagram](docs/JUDGES_FIELD_GUIDE.md#the-perception-decision-action-loop)
 
-**Primary award focus: Agentic Vision. Additional path: Best Use of COOL.** Private templates support routing to a separately provisioned, licensed COOL/Graviton backend. Configuration alone is not proof of COOL execution or acceleration; runtime evidence and reproducible comparisons are separate requirements.
+**Award focus: Agentic Vision.** See the [submission checklist and award evidence](docs/JUDGES_FIELD_GUIDE.md#submission-package-and-agentic-vision-evidence). COOL is not part of this award submission; optional backend configuration remains documented separately.
 
 ## Build, test and evaluate
 

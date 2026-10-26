@@ -6,7 +6,31 @@ AutoVision is a standalone OpenCV 5 visual-analysis service on AWS. Developers u
 
 This guide maps the implementation and available evidence to the [OpenCV AI Competition requirements](https://opencv26.devpost.com/). It does not certify award eligibility or replace the submitted video and evaluation artifacts.
 
-**Award focus:** Agentic Vision is the primary path; Best Use of COOL is an additional path through the private AWS backend option. Agent-loop evidence and COOL runtime/performance evidence are separate requirements.
+**Award focus:** Agentic Vision. COOL is not part of this award submission; the hosted demonstration uses the standard OpenCV backend.
+
+## Submission package and Agentic Vision evidence
+
+Submitted application release: [v0.1.21](https://github.com/techcto/autovision/tree/v0.1.21). Documentation on `main` includes subsequent submission clarifications.
+
+| Submission requirement | Where to review |
+| --- | --- |
+| Technical report: problem, users, implementation, evaluation, limitations and responsible use | This guide, [Technical README](../README-TECHNICAL.md), and [evaluation methodology](evaluation/README.md) |
+| Judge-accessible source | [Public repository](https://github.com/techcto/autovision) and the submitted release above |
+| Pinned dependencies and build/test instructions | [Node lockfile](../package-lock.json), [pinned vision requirements](../src/vision/requirements.txt), [local setup](hackathon-local-testing.md), and reproduction commands below |
+| AWS deployment instructions and architecture | [AWS architecture and diagrams](AWS-ARCHITECTURE.md), [deployment guide](../devops/cloudformation/README.md), and the agent diagram below |
+| Working endpoint | [AutoVision](https://autovision.dev); create an account, verify email, and use the signed-in console |
+| Public or unlisted video, no longer than five minutes | The video linked in the Devpost submission; it is submitted separately from this repository |
+| Evaluation including failures and limitations | [Three-image live evaluation](evaluation/README.md), [sanitized results](evaluation/agent-evaluation.json), and the recorded live trace below |
+
+| Agentic Vision additional requirement | Evidence |
+| --- | --- |
+| Perception → decision/orchestration → action diagram | [Workflow diagram](#the-perception-decision-action-loop): OpenCV measurements → Bedrock Decider → validated inspection tools → review recommendation |
+| OpenCV output changes a later decision, tool or action | [Recorded live trace](../devops/testing/autonomous-inspection-live.json): person detected → crop re-detection misses → focused scene assessment → human-review recommendation; [October 26 evaluation](evaluation/agent-evaluation.json) also records recovery from a rejected tool choice |
+| Task success and failure handling | [Evaluation methodology and results](evaluation/README.md): three completed loops, 2/3 initial expected-label matches, and retained missed-detection/advisory-output failures; [regression tests](../tests/inspection.test.ts) separately validate orchestration |
+| Observability | [Live console and MCP workflow](MCP-WORKFLOW.md): streamed step events, saved Decider/tool history and replay, with initial evidence retained |
+| Appropriate human control | Explicit AI consent and enhanced-inspection control, allowlisted tools/models, bounded attempts/time/quota, and advisory review recommendations; no autonomous security action |
+
+The three convenience images are a small workflow demonstration, not a representative accuracy benchmark. All expected review labels are positive; specificity and unnecessary-review rates are not established.
 
 ## A five-minute judge walkthrough
 
@@ -85,7 +109,9 @@ flowchart TD
     B -->|Yes| D
     D -->|finish after a successful follow-up| H[Advisory human-review recommendation]
     B -->|No valid completion| F[Keep initial evidence and recommend review]
-    T -->|Invalid request, quota or tool failure| F
+    T -->|Rejected request; attempt consumed| X[Return tool error to Decider]
+    X --> B
+    T -->|Terminal quota, timeout or runtime failure| F
 ```
 
 **Perception:** OpenCV decodes and measures the supplied images. A detected object or measured darkness can trigger deeper inspection.
@@ -206,21 +232,13 @@ Templates include DynamoDB encryption and point-in-time recovery, encrypted priv
 
 AutoVision does not require SmartDetector, a Ring camera, or Fire TV. SmartDetector owns its Ring authorization and presentation. The inspection loop returns evidence and recommendations; it does not itself unlock doors, identify intruders, resample a remote camera, or approve a security action. Deployment into a private account does not inherently make optional Bedrock processing local-only: image sharing still requires explicit consent and configuration.
 
-## Additional award path: COOL on private AWS
+## Optional private backend, outside this submission
 
 Both CloudFormation templates implement `VisionBackend=standard|cool` and `CoolVisionUrl`. Standard mode uses the bundled OpenCV sidecars. COOL mode removes those API/worker sidecars and routes vision requests to a separately provisioned private backend intended for a licensed COOL Marketplace Graviton host. This lets application/API compute coexist with an Arm vision backend without claiming that the entire application runs on Arm.
 
 The templates do not subscribe to Marketplace, install COOL, or provision that host. Selecting the backend is therefore deployment support—not proof of actual COOL execution. See the [backend guide](../devops/cloudformation/README.md#optional-cool-backend) and [template contract tests](../tests/deployment.test.ts).
 
-For the additional award, attach:
-
-- Actual COOL version/build, Marketplace entitlement/setup, Graviton instance type, Arm architecture, and deployment configuration.
-- A sanitized runtime trace proving the claimed image/video operation executes through COOL, not the standard OpenCV fallback.
-- Identical authorized inputs and operation settings for standard-versus-COOL comparisons, with warm-up policy, repetitions, concurrency, and environment recorded.
-- Measured latency distributions, throughput and/or cost, including any unfavorable results. No acceleration factor is asserted without those measurements.
-- Private networking and health checks, plus compatibility checks for `/analyze` and `/detect`. Agent crop/CLAHE tools also require `/inspect`; backend selection alone does not establish that compatibility.
-
-No COOL execution trace or baseline comparison was found among the inspected repository evidence. If those artifacts exist in the private deployment, add their sanitized exports before presenting this award path as demonstrated. The recorded standard-backend agent trace and local YOLOX benchmark are not COOL evidence.
+COOL execution and performance have not been established by the submitted evidence. This configuration option is outside the award submission. The standard-backend agent traces and local YOLOX benchmarks must not be presented as COOL results. Any separate deployment requires independent runtime, licensing, compatibility and performance validation; agent crop/CLAHE tools require `/inspect` as well as `/analyze` and `/detect`.
 
 ## Reproduce and verify
 
