@@ -54,7 +54,7 @@ const finishTool:Tool={toolSpec:{name:'finish',description:'Finish with an advis
 function toolSpec(name:InspectionTool,frameCount=12):Tool{return{toolSpec:{name,description:name==='inspect_region'?'Crop an existing OpenCV detector box and rerun OpenCV YOLOX. Advisory Bedrock boxes (source bedrock) cannot be re-detected; use assess_scene.':name==='enhance_low_light'?'Apply bounded CLAHE contrast enhancement and rerun OpenCV YOLOX. Does not recover missing detail.':'Request a focused advisory Bedrock scene assessment of one supplied frame.',inputSchema:{json:{type:'object',properties:{frame_index:{type:'integer',minimum:0,maximum:frameCount-1},...(name==='inspect_region'?{detection_index:{type:'integer',minimum:0,maximum:19}}:name==='assess_scene'?{focus:{type:'string',enum:['scene','package','activity']}}:{})},required:name==='inspect_region'?['frame_index','detection_index']:['frame_index'],}}}}}
 export function inspectionTriggered(evidence:Evidence,config:InspectionConfig){return evidence.frames.some(f=>f.detections.some(d=>config.triggers.includes(d.label as InspectionConfig['triggers'][number]))||config.tools.includes('enhance_low_light')&&(f.quality?.brightness??255)<config.brightnessThreshold)||evidence.observations.some(o=>o.detected&&config.triggers.includes(o.type as InspectionConfig['triggers'][number]));}
 export async function inspectAutonomously(input:AnalysisInput,evidence:Evidence,config:InspectionConfig,charge:(frames:number)=>Promise<boolean>,deps?:PipelineContext&{send?:(command:ConverseCommand,signal:AbortSignal)=>Promise<unknown>;fetcher?:typeof fetch}):Promise<InspectionResult>{
- const trace:Trace[]=[];let followups=0,imagesSent=false,activeStep='inspection',activeName='planner';
+ const trace:Trace[]=[];let followups=0,attempts=0,successfulTools=0,imagesSent=false,activeStep='inspection',activeName='planner';
  const fail=(status:string,reason:string):InspectionResult=>({status,review_recommended:true,reason,trace,followup_count:followups,images_sent_to_bedrock:imagesSent});
  if(evidence.engine_version!=='5.0.0')return fail('unavailable','Enhanced inspection requires verified OpenCV 5.0.0 measurements.');
  if(!inspectionTriggered(evidence,config))return{status:'not_triggered',review_recommended:false,reason:'No configured trigger in supplied samples; this does not establish absence.',trace,followup_count:0};
@@ -68,7 +68,7 @@ export async function inspectAutonomously(input:AnalysisInput,evidence:Evidence,
  try{
   for(let step=0;step<=config.maxSteps;step++){
    if(Date.now()>=deadline)return fail('budget_exhausted','Inspection time budget reached.');
-   const tools=step===config.maxSteps||followups>=config.maxSteps?[finishTool]:[...config.tools.map(name=>toolSpec(name,input.frames.length)),...(followups>0?[finishTool]:[])];
+   const tools=step===config.maxSteps||attempts>=config.maxSteps?[finishTool]:[...config.tools.map(name=>toolSpec(name,input.frames.length)),...(successfulTools>0?[finishTool]:[])];
    if(!tools.length)return fail('unavailable','No inspection tools enabled.');
    const start=Date.now();
    const decisionId='decision-'+step;
@@ -83,26 +83,40 @@ export async function inspectAutonomously(input:AnalysisInput,evidence:Evidence,
    const request=requests[0],args=request.input as Record<string,unknown>;
    deps?.onEvent?.({type:'step.completed',step_id:decisionId,summary:'Selected '+requests.map(r=>r.name).join(', '),data:{tools:requests.map(r=>({tool:r.name,arguments:r.input}))}});
    if(request.name==='finish'){
-    if(followups===0||typeof args?.review_recommended!=='boolean'||typeof args.reason!=='string'||!args.reason.trim())return fail('needs_review','Planner returned an invalid completion.');
+    if(successfulTools===0||typeof args?.review_recommended!=='boolean'||typeof args.reason!=='string'||!args.reason.trim())return fail('needs_review','Planner returned an invalid completion.');
     const reason=args.reason.slice(0,500);trace.push({step:trace.length,tool:'finish',status:'complete',duration_ms:Date.now()-start,reason});
     deps?.onEvent?.({type:'step.completed',step_id:'recommendation',title:args.review_recommended?'Human review recommended':'Review recommendation returned',summary:reason,data:{review_recommended:args.review_recommended,advisory:true}});
     return{status:'complete',review_recommended:args.review_recommended,reason,trace,model,followup_count:followups,images_sent_to_bedrock:imagesSent};
    }
-   if(requests.length>config.maxSteps-followups)return fail('budget_exhausted','Requested tools exceed remaining follow-up budget.');
+   if(requests.length>config.maxSteps-attempts)return fail('budget_exhausted','Requested tools exceed remaining follow-up budget.');
    const results:NonNullable<Message['content']>=[];
    for(const selected of requests){
-   if(step===config.maxSteps||!config.tools.includes(selected.name as InspectionTool))return fail('needs_review','Planner requested a disabled or unknown tool.');
+   if(step===config.maxSteps||attempts>=config.maxSteps)return fail('budget_exhausted','Inspection attempt limit reached.');
+   attempts++;
    const toolStart=Date.now(),toolId='tool-'+trace.length;
    activeStep=toolId;activeName=selected.name??'inspection';
    deps?.onEvent?.({type:'step.added',step_id:toolId,title:selected.name,summary:'Added dynamically by the Decider.'});
    deps?.onEvent?.({type:'step.started',step_id:toolId,title:selected.name});
+   try{
+   if(!config.tools.includes(selected.name as InspectionTool))throw new MediaError('Planner requested a disabled or unknown tool.');
+   if(!selected.input||typeof selected.input!=='object'||Array.isArray(selected.input))throw new MediaError('Invalid tool arguments.');
    const executed=await executeInspectionTool(selected.name as InspectionTool,selected.input as Record<string,unknown>,input,evidence,config,async n=>{const ok=await charge(n);if(ok)followups++;return ok},signal(),deps?.fetcher,()=>{imagesSent=true});
+   successfulTools++;
    const output=executed.output;
    trace.push({step:trace.length,tool:selected.name!,status:'complete',duration_ms:Date.now()-toolStart,input:executed.traceInput,output});
    deps?.onEvent?.({type:'step.completed',step_id:toolId,title:selected.name,data:JSON.parse(JSON.stringify(output,(key,value)=>key==='preview'?undefined:value))});
    // Do not resend retained JPEG previews as text to the planner.
    const compact=JSON.parse(JSON.stringify(output,(key,value)=>key==='preview'?undefined:value));
    results.push({toolResult:{toolUseId:selected.toolUseId!,content:[{json:compact}],status:'success'}});
+   }catch(error){
+    // Rejected choices consume an attempt, not image quota unless execution was reserved.
+    // Feed validation errors back so the Decider can recover within the same budget.
+    if(!(error instanceof MediaError)||![400,403].includes(error.status))throw error;
+    const reason=error.message;
+    trace.push({step:trace.length,tool:selected.name??'unknown',status:'failed',duration_ms:Date.now()-toolStart,reason});
+    deps?.onEvent?.({type:'step.failed',step_id:toolId,title:selected.name,summary:reason});
+    results.push({toolResult:{toolUseId:selected.toolUseId!,content:[{json:{error:reason,remaining_attempts:config.maxSteps-attempts,instruction:'Choose another allowed tool when budget remains. Missing evidence is not a negative detection.'}}],status:'error'}});
+   }
    }
    messages.push({role:'user',content:results});
   }

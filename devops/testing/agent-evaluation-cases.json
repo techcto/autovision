@@ -1,0 +1,8 @@
+{
+  "labeling": "Maintainer visual inspection of bundled public posters; expected review is a conservative demonstration policy, not a safety ground truth.",
+  "cases": [
+    {"id":"night-person","file":"public/demo/backyardintruder-poster.jpg","visible_label":"person","expected_review":true},
+    {"id":"night-dog","file":"public/demo/dognight-poster.jpg","visible_label":"dog","expected_review":true},
+    {"id":"day-delivery","file":"public/demo/package-poster.jpg","visible_label":"person","expected_review":true}
+  ]
+}

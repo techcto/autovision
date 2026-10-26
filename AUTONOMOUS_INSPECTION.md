@@ -1,5 +1,7 @@
 # Bounded autonomous inspection
 
+Rejected validation choices now return error tool results to the Decider and consume a bounded attempt, allowing another permitted choice. Quota/runtime failures remain terminal and recommend review. A valid finish requires a successful follow-up. See [MCP workflow and recovery](docs/MCP-WORKFLOW.md) for progress notifications, compact result summaries and single-pass follow-up hints, and [labeled evaluation](docs/evaluation/README.md) for the real-media procedure.
+
 REST `POST /api/v1/analyze` and MCP `analyze_image` / `analyze_video_frames` accept an optional `enhanced` boolean. `false` disables inspection; omission inherits the organization's default (initially disabled). `true` enables a bounded Bedrock-planned loop. **All enabled inspections require explicit `classify:true` AI consent**, even when enabled by an organization default. Invalid combinations fail before usage is charged. Existing single-pass analysis remains available.
 
 ```json

@@ -20,6 +20,8 @@ This guide maps the implementation and available evidence to the [OpenCV AI Comp
 
 ## Featured demo: give your favorite agent vision through MCP
 
+[Readable MCP results, live progress and rejected-tool recovery](MCP-WORKFLOW.md) · [Labeled live-evaluation procedure](evaluation/README.md).
+
 Connect a client that supports **remote Streamable HTTP MCP with bearer-token authentication**. No AutoVision-specific agent framework is required. Client configuration and file access differ; not every chat attachment is accessible to MCP tools.
 
 1. Sign in to [AutoVision](https://autovision.dev), create an organization API key in Settings, and copy it privately when shown.

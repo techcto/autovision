@@ -9,6 +9,23 @@ const image=Buffer.from([255,216,255,0]).toString('base64');
 const input={frames:[{image,at_ms:0}],classify:true};
 const evidence={engine_version:'5.0.0',frames:[{at_ms:0,quality:{brightness:35},detections:[{label:'person',score:.6,box:{x:.1,y:.1,width:.2,height:.4}}]}],observations:[{type:'person',detected:true,value:1}]};
 const request=(name:string,args:Record<string,unknown>)=>({output:{message:{role:'assistant',content:[{toolUse:{toolUseId:'call',name,input:args}}]}}});
+test('rejected Bedrock crop is returned as tool error; Decider recovers within two attempts',async()=>{
+ process.env.AUTOVISION_VISION_MODEL_ID='test-model';let turns=0,charged=0;const progress:string[]=[];
+ const grounded={...evidence,frames:[{...evidence.frames[0],detections:[...evidence.frames[0].detections,{label:'package',source:'bedrock',box:{x:.5,y:.5,width:.2,height:.2}}]}]};
+ try{
+ const result=await inspectAutonomously(input,grounded,defaultInspection,async n=>{charged+=n;return true},{onEvent:e=>progress.push(e.type),send:async command=>{
+  if(turns++===0)return request('inspect_region',{frame_index:0,detection_index:1});
+  if(turns===2){assert.match(JSON.stringify(command.input.messages),/"status":"error"/);assert.match(JSON.stringify(command.input.messages),/Only OpenCV/);return request('enhance_low_light',{frame_index:0});}
+  assert.match(JSON.stringify(command.input.messages),/0.94/);return request('finish',{review_recommended:true,reason:'Recovered measurement requires review.'});
+ },fetcher:async()=>Response.json({result:{engine_version:'5.0.0',frames:[{detections:[{label:'person',score:.94}]}]}})});
+ assert.equal(result.status,'complete');assert.equal(turns,3);assert.equal(charged,1);assert.equal(result.followup_count,1);assert.equal(result.review_recommended,true);
+ assert.deepEqual(result.trace.map(t=>[t.tool,t.status]),[['inspect_region','failed'],['enhance_low_light','complete'],['finish','complete']]);assert.ok(progress.includes('step.failed'));
+ }finally{delete process.env.AUTOVISION_VISION_MODEL_ID;}
+});
+test('two rejected tool attempts cannot loop indefinitely or finish without successful evidence',async()=>{
+ process.env.AUTOVISION_VISION_MODEL_ID='test-model';let turns=0;
+ try{const result=await inspectAutonomously(input,evidence,defaultInspection,async()=>assert.fail('Invalid requests must not charge'),{send:async()=>{turns++;return request('inspect_region',{frame_index:0,detection_index:99});}});assert.ok(turns<=3);assert.equal(result.review_recommended,true);assert.equal(result.followup_count,0);assert.equal(result.trace.filter(t=>t.status==='failed').length,2);}finally{delete process.env.AUTOVISION_VISION_MODEL_ID;}
+});
 test('approved lens models resolve by capability and planned adapters are not executable',()=>{
  const before=process.env.AUTOVISION_AI_MODELS_JSON;
  try{process.env.AUTOVISION_AI_MODELS_JSON=JSON.stringify([{id:'detail',label:'Detailed scene',modelId:'test-approved-model',skills:['scene','package']}]);assert.equal(resolveModel('detail','scene'),'test-approved-model');assert.equal(resolveModel('detail','planning'),undefined);assert.ok(approvedModels().some(m=>m.id==='detail'));assert.equal(validateInspection({...defaultInspection,sceneModel:'detail'},['deployment_default','detail']).sceneModel,'detail');assert.throws(()=>validateInspection({...defaultInspection,tools:['ocr']}));assert.ok(visionLenses.some(l=>l.id==='ocr'&&l.status==='planned'));process.env.AUTOVISION_AI_MODELS_JSON='[{"id":"bad"}]';assert.throws(()=>approvedModels())}finally{if(before===undefined)delete process.env.AUTOVISION_AI_MODELS_JSON;else process.env.AUTOVISION_AI_MODELS_JSON=before}
