@@ -13,12 +13,34 @@ GIVE YOUR APPLICATION A PAIR OF EYES.
 [![CI](https://github.com/techcto/autovision/actions/workflows/ci.yml/badge.svg)](https://github.com/techcto/autovision/actions/workflows/ci.yml)
 [![Open in GitHub](https://img.shields.io/badge/Open%20in-GitHub-181717?logo=github)](https://github.com/techcto/autovision)
 
-AutoVision is an open-source visual-analysis service for applications, camera adapters, and AI agents. Its local development build analyzes images and sampled video with OpenCV, adds Amazon Nova Lite scene summaries and advisory package boxes, and exposes the results through REST and MCP. SaaS and private installations share the same codebase.
+AutoVision is an open-source, standalone visual-analysis service for applications, camera adapters, and AI agents. OpenCV 5 measures images and sampled video; an opt-in Amazon Bedrock planner can decide to look deeper, execute bounded vision tools, and use their returned evidence to choose another tool or recommend human review. REST, MCP, the web console, SaaS, and private AWS installations share the same analysis pipeline.
+
+## Judges: start here
+
+![AutoVision AWS architecture](public/aws-stack.svg)
+
+![AutoVision evidence-driven agent loop](public/agent-flow.svg)
+
+Download submission-ready diagrams: [AWS stack PNG](public/aws-stack.png) · [Agent flow PNG](public/agent-flow.png). Editable SVGs and the reproducible renderer are in `public/` and `devops/testing/export-architecture-diagrams.mjs`.
+
+**Console walkthrough:** [Browse the final screenshot gallery](docs/console-gallery-final/index.html) · [captions and capture notes](docs/console-gallery-final/README.md). These show an actual signed-in local video analysis, job evidence, OpenCV settings and enhanced-inspection controls. Local Bedrock was not configured during capture; the screenshots do not claim a new successful AI loop.
+
+**[Judge's field guide and technical report](docs/JUDGES_FIELD_GUIDE.md)** · **[Agent workflow](docs/JUDGES_FIELD_GUIDE.md#the-perception-decision-action-loop)** · **[Recorded live trace](devops/testing/autonomous-inspection-live.json)** · **[Inspection contract](AUTONOMOUS_INSPECTION.md)**
+
+The key demonstration is not a chatbot explaining a fixed detection. **OpenCV evidence changes what the agent does next:** crop and re-detect an existing object, enhance a dark frame and remeasure it, or call a focused scene/package/activity assessment using a deployment-approved model. Actual tool results return to the planner before its next decision. The final action is an advisory review recommendation, not an autonomous security decision.
+
+**Featured MCP demo:** [Give your favorite agent vision](docs/JUDGES_FIELD_GUIDE.md#featured-demo-give-your-favorite-agent-vision-through-mcp). Connect `https://autovision.dev/mcp` using Streamable HTTP and an organization API key, discover the lenses, and ask the agent to inspect an authorized image. The guide includes connection fields, a ready-to-use prompt, file/base64 requirements, and the distinction between AutoVision's bounded Decider and an external agent composing individual tools.
+
+AutoVision stands alone. [SmartDetector](https://github.com/techcto/smartdetector) demonstrates a consuming application that supplies authorized camera samples and presents returned observations; Ring account linking and Fire TV presentation belong to SmartDetector, not the AutoVision service.
+
+### Special-award paths
+
+**Primary: Agentic Vision. Additional: Best Use of COOL.** Private AWS templates support `VisionBackend=cool` and `CoolVisionUrl` to route vision calls to a separately provisioned, licensed COOL service on AWS Graviton instead of the standard sidecars. This deployment option is implemented; it is not itself proof that COOL executed the workload or improved performance. See the [COOL evidence checklist](docs/JUDGES_FIELD_GUIDE.md#additional-award-path-cool-on-private-aws) and [backend configuration](devops/cloudformation/README.md#optional-cool-backend). Submit the actual COOL/Arm runtime evidence and reproducible baseline comparison for that award. The hosted standard backend must not be presented as COOL.
 
 [Website](https://autovision.dev) · [Source](https://github.com/techcto/autovision) · [Deployment guide](devops/cloudformation/README.md)
 
 <a href="https://autovision.dev"><img src="assets/launch-website.svg" width="200" alt="Visit AutoVision" /></a>
-<a href="https://aws.amazon.com/marketplace/pp/prodview-f4z2vbrqoh55u"><img src="assets/launch-marketplace.svg" width="200" alt="Subscribe to AutoVision on AWS Marketplace" /></a>
+**AWS Marketplace: coming soon.** The AutoVision listing is not yet live; no subscription link is enabled.
 <a href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?templateURL=https://autovision-api.s3.us-east-1.amazonaws.com/cloudformation/autovision.yaml&amp;stackName=autovision"><img src="assets/launch-aws.svg" width="200" alt="Launch AutoVision with AWS CloudFormation" /></a>
 
 ## The Problem
@@ -151,7 +173,7 @@ The response contains motion observations. Requests require a valid organization
 
 ## AWS Marketplace And Deployment
 
-Subscribe through [AWS Marketplace](https://aws.amazon.com/marketplace/pp/prodview-f4z2vbrqoh55u) before launching images that require a subscription. The orange **LAUNCH AWS** button opens the standalone CloudFormation template; it does not subscribe you, select a network, or create a stack until you review and submit the parameters.
+The AutoVision Marketplace listing is **not yet live**. Private-install templates, container delivery tooling, and deployment contract tests are built out. This is deployment readiness, not a claim that public Marketplace purchase or a new buyer's end-to-end installation has been verified. Images requiring entitlement remain subject to authorized access. The **LAUNCH AWS** button opens the standalone CloudFormation template; it does not subscribe you, select a network, or create a stack until you review and submit the parameters.
 
 | Installation | Template |
 | --- | --- |
@@ -180,7 +202,6 @@ Review each resource's deletion/retention policy before removing a stack. Export
 - All image processing and object detection use OpenCV 5.0.0. Bounded autonomous inspection is implemented locally; live Bedrock and labeled-clip evaluation are still required before claiming evaluated agentic performance or award qualification.
 - Sensor thresholds are demonstration rules, not certified alarms or life-safety equipment.
 - Optional Bedrock failures do not prevent deterministic incident persistence.
-- AgentCore runtime integration is not implemented in this repository.
 - Public demonstrations and screenshots must use explicitly authorized demo media, never private customer footage. Automated fixtures use generated test data.
 
 ## License

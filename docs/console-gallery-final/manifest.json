@@ -1,0 +1,42 @@
+{
+  "capturedAt": "2026-10-26T12:47:33.305Z",
+  "notes": "Real authenticated local console and fresh OpenCV video analysis. Enhanced-inspection settings demonstrated; no fresh successful Bedrock agent loop is claimed. Original inspection settings restored after capture.",
+  "captures": [
+    {
+      "file": "01-console-manual-run.png",
+      "caption": "Signed-in console: upload an authorized short clip; browser sampling and privacy limits are shown."
+    },
+    {
+      "file": "02-console-job-history.png",
+      "caption": "Real local manual analysis persisted in private job history with actor, source, frames and duration."
+    },
+    {
+      "file": "03-console-job-details.png",
+      "caption": "Actual local OpenCV 5 result: detections, runtime information and recorded samples."
+    },
+    {
+      "file": "04-console-frame-evidence.png",
+      "caption": "A later selected frame and measured detections from the actual local video analysis."
+    },
+    {
+      "file": "05-opencv-detection-settings.png",
+      "caption": "Organization OpenCV/YOLOX object controls, presets and advisory AI categories."
+    },
+    {
+      "file": "06-enable-enhanced-inspection.png",
+      "caption": "Enable enhanced AI by default, choose triggers and bound follow-ups. Model-configuration warnings remain visible."
+    },
+    {
+      "file": "07-approved-model-controls.png",
+      "caption": "Separate approved planner, scene, package and activity model selectors."
+    },
+    {
+      "file": "08-opencv-low-light-controls.png",
+      "caption": "Allow low-light inspection; control brightness threshold and CLAHE strength."
+    },
+    {
+      "file": "09-crop-inspection-controls.png",
+      "caption": "Allow crop/re-detection and control region padding."
+    }
+  ]
+}

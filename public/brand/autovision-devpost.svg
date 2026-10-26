@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+<rect width="1200" height="800" fill="#101114"/>
+<circle cx="600" cy="245" r="116" fill="none" stroke="#ed3049" stroke-width="22"/><circle cx="600" cy="245" r="78" fill="#ed3049"/>
+<text x="600" y="476" text-anchor="middle" fill="#ffffff" font-family="DejaVu Sans,Arial,sans-serif" font-weight="700" font-size="100">AutoVision<tspan fill="#a3a5ad" font-weight="400" font-size="64">.dev</tspan></text>
+<text x="600" y="566" text-anchor="middle" fill="#f3f3f5" font-family="DejaVu Sans,Arial,sans-serif" font-size="33">Give your agent a reason to look again.</text>
+<path d="M420 625h360" stroke="#ed3049" stroke-width="3"/>
+<text x="600" y="686" text-anchor="middle" fill="#a3a5ad" font-family="DejaVu Sans,Arial,sans-serif" font-size="25" letter-spacing="3">OPENCV 5  /  AWS  /  MCP</text>
+</svg>

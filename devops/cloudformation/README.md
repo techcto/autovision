@@ -1,5 +1,7 @@
 # AutoVision deployment
 
+**AutoVision Marketplace status: coming soon, not publicly live.** Private-install templates and release tooling are implemented and covered by deployment contract tests. Public buyer checkout and new-buyer installation are separate verification steps; use only authorized image access. The third-party COOL Marketplace offering linked below is separate from AutoVision's listing.
+
 ## Optional COOL backend
 
 Both application templates accept `VisionBackend=standard|cool` (default: `standard`). Standard mode preserves the bundled OpenCV sidecars. COOL mode removes the API/worker standard sidecars and sends vision calls to `CoolVisionUrl`; web/API/worker ECS services remain otherwise unchanged. A template rule requires a URL when COOL is selected. Switching backend creates new task-definition revisions and rolls services; review the change set before executing.
