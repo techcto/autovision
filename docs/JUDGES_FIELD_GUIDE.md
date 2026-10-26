@@ -17,7 +17,6 @@ This guide maps the implementation and available evidence to the [OpenCV AI Comp
 5. Show the review recommendation and a failure or disagreement case. Explain that a completed loop is not proof of a correct visual conclusion.
 6. Show REST/MCP access and the AWS architecture. Close with the standalone/private deployment options and honest limitations.
 
-Record a public or unlisted video of no more than five minutes, including the team, working application, architecture, and principal results. Confirm judge access before submission. The competition page has conflicting deadline times; use its earlier displayed October 26, 2026, 11:45 PM Pacific cutoff unless organizers clarify.
 
 ## Featured demo: give your favorite agent vision through MCP
 
@@ -118,7 +117,7 @@ The [sanitized live smoke trace](../devops/testing/autonomous-inspection-live.js
 | Crop re-detection | Zero people returned; initial evidence retained | Planner subsequently selected `assess_scene` |
 | Focused assessment | Person observed; no package returned | Planner finished with human review recommended |
 
-This is a saved live run, not a scripted planner fixture. It demonstrates evidence feedback and bounded execution, but does not establish a counterfactual causal benchmark or detector accuracy. Its limitations are deliberately retained: the crop missed a person, and the planner's final package-uncertainty wording was not supported by the returned package detections. The current crop implementation has subsequently changed; the archived trace remains evidence of its recorded revision, not a guarantee of current output. Capture a fresh run for the final video and preserve its revision, configuration, and result.
+This is a saved live run, not a scripted planner fixture. It demonstrates evidence feedback and bounded execution, but does not establish a counterfactual causal benchmark or detector accuracy. Its limitations are deliberately retained: the crop missed a person, and the planner's final package-uncertainty wording was not supported by the returned package detections. The current crop implementation has subsequently changed; the archived trace remains evidence of its recorded revision, not a guarantee of current output.
 
 The deterministic [inspection tests](../tests/inspection.test.ts) separately assert that measured brightness changes tool selection and that a returned tool result informs the final review decision. Injected planner responses validate orchestration; they are **not** additional live model evaluations.
 
@@ -129,18 +128,18 @@ The deterministic [inspection tests](../tests/inspection.test.ts) separately ass
 - YOLOX is a checksum-pinned OpenCV Zoo ONNX model, executed through `cv2.dnn`. See [object detection](../OBJECT_DETECTION.md) and [container build](../devops/docker/Dockerfile.vision).
 - Nova supplies optional advisory scene/package/smoke/fire grounding. Those are not specialized validated OpenCV safety detectors. COOL/Graviton acceleration is not claimed.
 
-Existing local x86-64 evaluation reported exact agreement with generated motion masks at 0%, 5%, 50%, and 100% changed pixels, and 77–79 ms median two-frame analysis on the measured machine. Recorded detector evaluation sampled 56 frames across supplied clips and a licensed street clip: person presence on backyard/doorbell/delivery clips was 11/11, 10/11, and 11/11 frames, and dog presence on the night clip was 8/11. The measured YOLOX median was 38 ms and p95 40 ms per 640-pixel frame. These historical local measurements are not current AWS latency promises, hand-labeled precision/recall, or agentic task-success rates. Details and reproduction commands remain in the [README](../README.md#technical-report-and-reproducible-evaluation).
+Existing local x86-64 evaluation reported exact agreement with generated motion masks at 0%, 5%, 50%, and 100% changed pixels, and 77–79 ms median two-frame analysis on the measured machine. Recorded detector evaluation sampled 56 frames across supplied clips and a licensed street clip: person presence on backyard/doorbell/delivery clips was 11/11, 10/11, and 11/11 frames, and dog presence on the night clip was 8/11. The measured YOLOX median was 38 ms and p95 40 ms per 640-pixel frame. These historical local measurements are not current AWS latency promises, hand-labeled precision/recall, or agentic task-success rates. Details and reproduction commands remain in the [technical README](../README-TECHNICAL.md#technical-report-and-reproducible-evaluation).
 
 ### Evaluation and failure-handling matrix
 
-| Question | Available evidence | Remaining submission work |
+| Question | Available evidence | Evaluation boundary |
 | --- | --- | --- |
-| Does the loop run and respect limits? | Saved live run; consent, quota, tool-feedback and budget tests | Capture a fresh, revision-identified live run |
-| Does evidence change later behavior? | Saved region → crop miss → scene-assessment sequence; deterministic feedback test | Show the actual returned evidence and next decision in the video |
-| What happens on failure? | Tests for unknown/disabled tools, invalid regions, unsupported runtime/model, quota and planner failure | Show a clearly labeled failure demonstration without altering production |
-| Is a recommendation correct? | One live review recommendation with a documented unsupported phrase | Evaluate labeled cases and report correct review, unnecessary review, and missed-review counts |
-| Can a judge inspect the process? | Structured trace, tool input/output, durations, model/runtime identifiers, SSE step events | Export sanitized evidence; exclude private images and credentials |
-| Who controls consequences? | Consent, enabled-tool policy, bounded budget, advisory recommendation | Explain downstream human approval; no autonomous security action is claimed |
+| Does the loop run and respect limits? | Saved live run; consent, quota, tool-feedback and budget tests | Historical runtime evidence; configuration and model behavior can change |
+| Does evidence change later behavior? | Saved region → crop miss → scene-assessment sequence; deterministic feedback test | Observable evidence feedback, not a counterfactual causal benchmark |
+| What happens on failure? | Tests for unknown/disabled tools, invalid regions, unsupported runtime/model, quota and planner failure | Initial evidence retained and human review recommended |
+| Is a recommendation correct? | One live review recommendation with a documented unsupported phrase | No labeled agentic success rate is established |
+| Can a judge inspect the process? | Structured trace, tool input/output, durations, model/runtime identifiers, SSE step events | Sanitized evidence, not private image content or credentials |
+| Who controls consequences? | Consent, enabled-tool policy, bounded budget, advisory recommendation | Downstream application and human approval; no autonomous security action |
 
 Do not infer success rates from unit-test counts. Distinguish completed execution, correct perception, appropriate review decisions, and latency. Brightness changes, shadows, night scenes, crop misses, occlusion, and ambiguous package grounding are useful failure cases.
 
@@ -149,6 +148,8 @@ Do not infer success rates from unit-test counts. Distinguish completed executio
 ![AWS stack architecture](../public/aws-stack.svg)
 
 [Download the AWS-stack PNG](../public/aws-stack.png). The AutoVision Marketplace listing is not yet live; private-install templates and deployment contract tests are available, but public buyer purchase is not claimed as verified.
+
+[Dedicated AWS architecture and deployment rationale](AWS-ARCHITECTURE.md) · [Technical setup, API examples and evaluation](../README-TECHNICAL.md).
 
 ```mermaid
 flowchart LR
@@ -219,7 +220,7 @@ No COOL execution trace or baseline comparison was found among the inspected rep
 
 ## Reproduce and verify
 
-Follow [local setup and Bedrock credentials](hackathon-local-testing.md), [API/MCP examples](../README.md), and [deployment instructions](../devops/cloudformation/README.md). Keep secrets out of Git. Use Node.js as declared by `package.json` and the pinned Python dependencies.
+Follow [local setup and Bedrock credentials](hackathon-local-testing.md), [API/MCP examples](../README-TECHNICAL.md), and [deployment instructions](../devops/cloudformation/README.md). Keep secrets out of Git. Use Node.js as declared by `package.json` and the pinned Python dependencies.
 
 ```sh
 npm ci
@@ -231,20 +232,10 @@ npm run test:mcp:local
 AUTOVISION_TEST_BEDROCK=true npm run test:mcp:local
 ```
 
-For actual image transforms, run the Python inspection tests with the pinned OpenCV environment. Those unit tests include stubbed detector outputs; separate detector integration checks exercise the pinned model. Preserve the command, source revision, input authorization/hash, runtime/model versions, outcome, duration, and quota consumption for any new benchmark. No fresh benchmark or production inspection run was performed merely by writing this guide.
+For actual image transforms, run the Python inspection tests with the pinned OpenCV environment. Those unit tests include stubbed detector outputs; separate detector integration checks exercise the pinned model. Preserve the command, source revision, input authorization/hash, runtime/model versions, outcome, duration, and quota consumption for any new benchmark. The evidence above distinguishes historical measurements from current runtime guarantees.
 
 ## Responsible operation and human control
 
 Explicit `classify:true` consent is required for enhanced inspection. Payload, frame-count, tool, region, model, time, and quota boundaries constrain execution. Unknown tools and missing results cannot silently become negative detections. Failed inspection preserves initial evidence and recommends review.
 
 Private jobs retain bounded sampled previews and traces under the seven-day policy; original video is not retained by the browser-sampling workflow. Purge and access rules remain authoritative. Public demo footage must be authorized for redistribution. Separate face APIs are sensitive opt-in measurements and are not part of this inspection loop. No identity, intent, danger, certified alarm, or automatic model-accuracy guarantee is claimed.
-
-### Submission checklist
-
-- [ ] Confirm submitted source revision and judge-accessible endpoint.
-- [ ] Attach this technical report and the workflow diagram.
-- [ ] Attach a fresh sanitized evidence-changing trace with its configuration/revision.
-- [ ] Separate historical benchmark results, unit tests, cached demos, and new live results.
-- [ ] Include task-success and failure evaluation, or explicitly identify unmeasured items.
-- [ ] Publish a judge-accessible video of at most five minutes.
-- [ ] Verify no private footage, credentials, or customer data appears in submission assets.

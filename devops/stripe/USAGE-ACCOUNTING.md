@@ -1,4 +1,4 @@
-# Usage accounting handoff
+# Usage accounting and validation
 
 ## Implemented locally
 
@@ -62,7 +62,7 @@ billing page. Missing any one keeps today's hard plan quota.
 - The billing page shows measured usage, overage units, export status and the
   overage form. No dollar estimates are shown.
 
-## Goyal's test checklist
+## Validation procedure
 
 1. Run `npm run typecheck`, `npm run test:web`, and
    `node --test devops/stripe/setup-plans.test.mjs`.
@@ -92,7 +92,7 @@ the invoice preview showed Starter $49.00 + 2 × $0.005; the cap refused usage
 beyond 10,100. Not yet tested: alert emails through SES, worker retry against a
 real Stripe outage, AI credit export (needs Bedrock and approved weights).
 
-## Still required before enabling in production
+## Production enablement prerequisites
 
 - Decide overage prices, AI credit weights and included AI credits; confirm
   model/region/cache pricing. SDK retries can incur cost not represented by a
@@ -104,5 +104,5 @@ real Stripe outage, AI credit export (needs Bedrock and approved weights).
 - Live rollout: create live overage prices deliberately with `--apply --live`,
   then set the parameters through a reviewed CloudFormation change set.
 
-Production is unchanged. Usage-based overage ships disabled; keep it disabled
+Usage-based overage ships disabled; keep it disabled
 in production until the items above are decided and tested in Stripe test mode.

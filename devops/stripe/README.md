@@ -50,7 +50,7 @@ Copy `STRIPE_IMAGE_OVERAGE_PRICE_ID` (and optionally `STRIPE_AI_OVERAGE_PRICE_ID
 with `AUTOVISION_AI_CREDIT_UNIT_CENTS`) into deployment config, then set
 `AUTOVISION_USAGE_EXPORT=enabled`. Each organization still has to opt in on the
 billing page, which attaches the overage price to its subscription. See
-[Goyal's handoff](GOYAL-HANDOFF.md) for behavior, tests and what remains.
+[Usage accounting and validation](USAGE-ACCOUNTING.md) for behavior, validation procedures and production enablement prerequisites.
 
 Track OpenCV image passes/compute separately from Bedrock model/token usage.
 Premium models and agent loops can dominate variable costs; always-on compute,
