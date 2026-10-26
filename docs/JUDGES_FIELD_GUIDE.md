@@ -125,6 +125,8 @@ The deterministic [inspection tests](../tests/inspection.test.ts) separately ass
 
 ## OpenCV 5 implementation and evaluation
 
+**October 26 live agent evaluation:** [report and methodology](evaluation/README.md) · [sanitized JSON](evaluation/agent-evaluation.json). Three actual OpenCV/Nova loops completed, including live recovery from a rejected Bedrock-box crop. Expected initial visible-label matches were 2/3; all three recommendations matched the conservative review policy. The missed dog and misleading package assessment are retained as failures. This small positive-only set does not establish general accuracy or false-review rates.
+
 - Pinned Python package: `opencv-python-headless==5.0.0.93`; runtime checks require `cv2` engine version `5.0.0`. [Dependencies](../src/vision/requirements.txt).
 - OpenCV performs decoding, resizing, grayscale conversion, frame differencing, thresholding, changed-pixel measurement, JPEG previews, DNN object detection, crop inspection, and CLAHE enhancement.
 - YOLOX is a checksum-pinned OpenCV Zoo ONNX model, executed through `cv2.dnn`. See [object detection](../OBJECT_DETECTION.md) and [container build](../devops/docker/Dockerfile.vision).

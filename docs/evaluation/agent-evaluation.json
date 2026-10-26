@@ -1,0 +1,117 @@
+{
+  "recorded_at": "2026-10-26T13:23:13.098Z",
+  "source_revision": "5844de7",
+  "working_tree_dirty": true,
+  "kind": "actual_local_opencv_and_configured_bedrock_or_reported_failure",
+  "labeling": "Maintainer visual inspection of bundled public posters; expected review is a conservative demonstration policy, not a safety ground truth.",
+  "notes": [
+    "No full provider responses or image previews are exported; concise advisory reasons are retained.",
+    "Three convenience samples are not a representative accuracy benchmark.",
+    "Unavailable model outcomes test fallback, not successful agentic reasoning.",
+    "No external action is implemented; human approval remains with the consuming application."
+  ],
+  "summary": {
+    "cases": 3,
+    "completed_loops": 3,
+    "visible_label_matches": 2,
+    "review_policy_matches": 3,
+    "unnecessary_review": 0,
+    "missed_review": 0,
+    "failed_or_unavailable": 0
+  },
+  "results": [
+    {
+      "id": "night-person",
+      "input_sha256": "8af0c6df07159ea8cd10808a969e09668915d1917952b6cb49fc2bc0ec479414",
+      "expected_label": "person",
+      "expected_review": true,
+      "http_status": 200,
+      "duration_ms": 2890,
+      "engine_version": "5.0.0",
+      "model": "us.amazon.nova-lite-v1:0",
+      "status": "complete",
+      "label_observed": true,
+      "loop_completed": true,
+      "review_recommended": true,
+      "review_matches_policy": true,
+      "initial_evidence_retained": true,
+      "trace": [
+        {
+          "tool": "inspect_region",
+          "status": "complete",
+          "duration_ms": 135
+        },
+        {
+          "tool": "finish",
+          "status": "complete",
+          "duration_ms": 951,
+          "reason": "The cropped region inspection confirmed the presence of a person, but the low brightness of the original frame may have affected detection accuracy. Further human review is recommended to ensure the detection is accurate and relevant."
+        }
+      ]
+    },
+    {
+      "id": "night-dog",
+      "input_sha256": "54af050a9fb9046b1dbd01b17fa32aba85a2635b476ffe584df0535874ddcfc3",
+      "expected_label": "dog",
+      "expected_review": true,
+      "http_status": 200,
+      "duration_ms": 6456,
+      "engine_version": "5.0.0",
+      "model": "us.amazon.nova-lite-v1:0",
+      "status": "complete",
+      "label_observed": false,
+      "loop_completed": true,
+      "review_recommended": true,
+      "review_matches_policy": true,
+      "initial_evidence_retained": true,
+      "trace": [
+        {
+          "tool": "inspect_region",
+          "status": "failed",
+          "duration_ms": 0,
+          "reason": "Only OpenCV detector regions can be re-detected"
+        },
+        {
+          "tool": "assess_scene",
+          "status": "complete",
+          "duration_ms": 1108
+        },
+        {
+          "tool": "finish",
+          "status": "complete",
+          "duration_ms": 1473,
+          "reason": "The scene assessment confirms the presence of a package, but the lighting conditions are poor, making it difficult to clearly identify the package. Further inspection or human review may be necessary to confirm the package's details."
+        }
+      ]
+    },
+    {
+      "id": "day-delivery",
+      "input_sha256": "32426195a30463db430ee2f91d25db2eb00e5ef1781a192a6e62fabaf97dd09d",
+      "expected_label": "person",
+      "expected_review": true,
+      "http_status": 200,
+      "duration_ms": 3384,
+      "engine_version": "5.0.0",
+      "model": "us.amazon.nova-lite-v1:0",
+      "status": "complete",
+      "label_observed": true,
+      "loop_completed": true,
+      "review_recommended": true,
+      "review_matches_policy": true,
+      "initial_evidence_retained": true,
+      "trace": [
+        {
+          "tool": "inspect_region",
+          "status": "complete",
+          "duration_ms": 127
+        },
+        {
+          "tool": "finish",
+          "status": "complete",
+          "duration_ms": 1082,
+          "reason": "The initial detection of a person was confirmed with a higher score in the cropped region, but the lack of detected motion and absence of cats and dogs may indicate an incomplete scene assessment. Further review is recommended to ensure all relevant objects and activities are accounted for."
+        }
+      ]
+    }
+  ]
+}
